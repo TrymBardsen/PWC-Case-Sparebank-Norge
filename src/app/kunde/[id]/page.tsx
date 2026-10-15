@@ -151,7 +151,7 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
               <ul className="space-y-2 text-sm">
                 {eksponerte.map((s) => (
                   <li key={s.til}>
-                    <Link href={`/kunde/${s.til}`} className="font-medium text-teal-700 hover:underline">
+                    <Link href={`/kunde/${s.til}`} className="font-semibold text-snb-rod hover:underline">
                       {navn(s.til)}
                     </Link>{" "}
                     får {prosent(s.andel)} av innbetalingene sine herfra. Rammes hvis {kunde.navn} sliter.
@@ -160,7 +160,7 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
                 {avhengigAv.map((s) => (
                   <li key={s.fra}>
                     {prosent(s.andel)} av innbetalingene kommer fra{" "}
-                    <Link href={`/kunde/${s.fra}`} className="font-medium text-teal-700 hover:underline">
+                    <Link href={`/kunde/${s.fra}`} className="font-semibold text-snb-rod hover:underline">
                       {navn(s.fra)}
                     </Link>
                     , som nå betaler i snitt {s.forsinkelse} dager etter forfall.

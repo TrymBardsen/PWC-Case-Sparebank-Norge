@@ -91,10 +91,10 @@ export function TekstSignaler({ kundeId, kilder, analyse: start, debitorer }: { 
           {analyse.forkastet > 0 && <span className="text-slate-500"> · {analyse.forkastet} forslag forkastet fordi sitatet ikke fantes</span>}
         </span>
         <span className="flex gap-3 text-xs">
-          <button onClick={() => setVisKilder((v) => !v)} className="text-teal-700 hover:underline">
+          <button onClick={() => setVisKilder((v) => !v)} className="font-semibold text-snb-rod hover:underline">
             {visKilder ? "Skjul kilder" : "Vis kilder"}
           </button>
-          <button onClick={kjor} disabled={laster} className="rounded-lg bg-slate-900 px-3 py-1 font-medium text-white disabled:opacity-50">
+          <button onClick={kjor} disabled={laster} className="rounded-md bg-snb-gronn px-3 py-1.5 font-semibold text-white hover:bg-teal-800 disabled:opacity-50">
             {laster ? "Analyserer …" : "Analyser med Claude"}
           </button>
         </span>

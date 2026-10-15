@@ -214,7 +214,7 @@ function GronneMuligheter({ kunder, gronn }: { kunder: Kunde[]; gronn: Map<strin
             {rader.map(({ k, g }) => (
               <tr key={k.id} className="border-b border-slate-100 align-top last:border-0">
                 <td className="py-2.5 pl-5">
-                  <Link href={`/kunde/${k.id}`} className="font-medium hover:text-teal-700 hover:underline">
+                  <Link href={`/kunde/${k.id}`} className="font-medium hover:text-snb-rod hover:underline">
                     {k.navn}
                   </Link>
                   <div className="text-xs text-slate-500">{g.navn}</div>

@@ -61,7 +61,7 @@ export function Oppfolging({ kundeId, notater, radgiver }: { kundeId: string; no
           placeholder="Hva ble avtalt?"
           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-600"
         />
-        <button onClick={lagre} disabled={!tekst.trim()} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40">
+        <button onClick={lagre} disabled={!tekst.trim()} className="rounded-md bg-snb-gronn px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800 disabled:opacity-40">
           Logg oppfølging
         </button>
       </div>

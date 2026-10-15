@@ -105,7 +105,7 @@ export function AiBrief({ kundeId }: { kundeId: string }) {
 
           <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
             <span>Beslutningsstøtte. Du tar beslutningen, og betalingslettelser dokumenteres etter retningslinjene.</span>
-            <button onClick={hent} disabled={laster} className="shrink-0 text-teal-700 hover:underline">
+            <button onClick={hent} disabled={laster} className="shrink-0 font-semibold text-snb-rod hover:underline">
               {laster ? "Lager nytt …" : "Lag på nytt"}
             </button>
           </div>

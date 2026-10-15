@@ -43,7 +43,8 @@ export default function Sokside() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Søk i Enhetsregisteret</h1>
+        <div className="overtittel mb-1">Åpne data</div>
+        <h1 className="font-overskrift text-3xl font-bold text-snb-rod">Søk i Enhetsregisteret</h1>
         <p className="text-sm text-slate-600">
           Ekte, åpne data fra Brønnøysundregistrene. Slik henter Likviditetsradar kundebilde, status og regnskap for nye og eksisterende kunder.
         </p>

@@ -4,7 +4,8 @@ export default function Om() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Om Likviditetsradar</h1>
+        <div className="overtittel mb-1">Slik fungerer det</div>
+        <h1 className="font-overskrift text-3xl font-bold text-snb-rod">Om Likviditetsradaren</h1>
         <p className="mt-1 text-slate-600">
           Fra reaktiv til proaktiv: rådgiveren ser likviditetsskvisen uker før kunden ringer, forstår hvorfor, og har et konkret forslag klart når samtalen starter.
         </p>
@@ -92,7 +93,7 @@ function Steg({ nr, tittel, tekst }: { nr: number; tittel: string; tekst: string
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-1 flex items-center gap-2">
-        <span className="grid h-6 w-6 place-items-center rounded-full bg-teal-700 text-xs font-semibold text-white">{nr}</span>
+        <span className="grid h-6 w-6 place-items-center rounded-full bg-snb-rod text-xs font-semibold text-white">{nr}</span>
         <span className="font-semibold">{tittel}</span>
       </div>
       <p className="text-sm text-slate-600">{tekst}</p>

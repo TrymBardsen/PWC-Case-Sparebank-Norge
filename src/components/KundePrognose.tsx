@@ -119,9 +119,10 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
   return (
     <div className="space-y-6">
       <Kort
-        tittel="Likviditetsprognose og insolvensgrense, 13 uker"
+        overtittel="Saldo inkl. trekkramme"
+        tittel="Likviditetsprognose neste 13 uker"
         hoyre={
-          <button onClick={() => setVisMetode((v) => !v)} className="text-xs text-teal-700 hover:underline">
+          <button onClick={() => setVisMetode((v) => !v)} className="text-sm font-semibold text-snb-rod hover:underline">
             {visMetode ? "Skjul metode" : "Slik er prognosen laget"}
           </button>
         }
@@ -173,7 +174,7 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
       </Kort>
 
       <div className="space-y-6">
-        <Kort tittel="Hva om …?" hoyre={<span className="text-xs text-slate-500">Tiltakene vurderes alltid mot valgt scenario</span>}>
+        <Kort overtittel="Scenarioer" tittel="Hva om …?" hoyre={<span className="text-xs text-slate-500">Tiltakene vurderes alltid mot valgt scenario</span>}>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {scenarioer.map((s) => (
               <Bryter
@@ -190,10 +191,11 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
         </Kort>
 
         <Kort
+          overtittel={`${alleTiltak.length} mulige tiltak · velg for å simulere`}
           tittel="Tiltak mot mislighold"
           hoyre={
             valgte.length > 0 && (
-              <button onClick={() => setValgte([])} className="text-xs text-teal-700 hover:underline">
+              <button onClick={() => setValgte([])} className="text-sm font-semibold text-snb-rod hover:underline">
                 Fjern alle tiltak
               </button>
             )
@@ -220,7 +222,8 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
       )}
 
       <Kort
-        tittel="Effekt av tiltak: margin til insolvensgrensen på det laveste punktet"
+        overtittel="Margin til insolvensgrensen på det laveste punktet"
+        tittel="Effekt av tiltak"
         hoyre={<span className="text-xs text-slate-500">Hvert tiltak alene{scenarioAktiv ? ", gitt valgt scenario" : ""}</span>}
       >
         <TiltakGraf rader={rader} />
@@ -230,7 +233,7 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
         </p>
       </Kort>
 
-      <Kort tittel="Uke for uke" hoyre={<span className="text-xs text-slate-500">Klikk en uke for å se postene</span>}>
+      <Kort overtittel="Kontantstrøm" tittel="Uke for uke" hoyre={<span className="text-xs text-slate-500">Klikk en uke for å se postene</span>}>
         <div className="-mx-5 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -313,7 +316,7 @@ function Anbefaling({ vurdering, pakkeErValgt, onBruk }: { vurdering: ReturnType
         <button
           onClick={onBruk}
           disabled={pakkeErValgt}
-          className="shrink-0 rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 disabled:bg-slate-300 disabled:text-slate-600"
+          className="shrink-0 rounded-md bg-snb-rod px-3 py-1.5 text-xs font-semibold text-white hover:bg-snb-rod-mork disabled:bg-slate-300 disabled:text-slate-600"
         >
           {pakkeErValgt ? "Vises i prognosen" : "Vis i prognosen"}
         </button>
@@ -457,12 +460,18 @@ function FragmentRad({ children }: { children: React.ReactNode }) {
 }
 
 function Tall({ tittel, verdi, under, farge, sammenlign }: { tittel: string; verdi: string; under: string; farge: string; sammenlign?: string }) {
+  // Fargeboks som i bankens mal: lys rød ved fare, lys grønn når det holder, ellers grå
+  const boks = farge.includes("red")
+    ? "border-red-200 bg-snb-rod-lys"
+    : farge.includes("emerald") || farge.includes("teal")
+      ? "border-teal-200 bg-snb-gronn-lys"
+      : "border-slate-200 bg-snb-gra";
   return (
-    <div className="rounded-lg bg-slate-50 px-4 py-3">
-      <div className="text-xs text-slate-500">{tittel}</div>
-      <div className={`tall text-xl font-semibold ${farge}`}>{verdi}</div>
-      <div className="text-xs text-slate-500">{under}</div>
-      {sammenlign && <div className="mt-1 text-xs font-medium text-teal-700">{sammenlign}</div>}
+    <div className={`rounded-lg border px-4 py-3 ${boks}`}>
+      <div className="text-[11px] font-semibold tracking-wide text-slate-600 uppercase">{tittel}</div>
+      <div className={`tall mt-0.5 font-overskrift text-2xl font-bold ${farge}`}>{verdi}</div>
+      <div className="text-xs text-slate-600">{under}</div>
+      {sammenlign && <div className="mt-1 text-xs font-semibold text-snb-gronn">{sammenlign}</div>}
     </div>
   );
 }
