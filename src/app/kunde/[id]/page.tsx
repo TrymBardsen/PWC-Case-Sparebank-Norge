@@ -23,7 +23,6 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
   const { vurderinger, smitte } = hentVurderinger();
   const v = vurderinger.get(kunde.id)!;
   const makro = await hentMakro();
-  const faktorer = [...v.faktorer].sort((a, b) => b.poeng - a.poeng || Number(a.ukjent ?? 0) - Number(b.ukjent ?? 0));
   const navn = (kid: string) => portefolje.kunder.find((k) => k.id === kid)!.navn;
   const eksponerte = smitte.filter((s) => s.fra === kunde.id);
   const avhengigAv = smitte.filter((s) => s.til === kunde.id);
@@ -126,27 +125,8 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
         }
         hoyre={
           <>
-            <Kort overtittel="Forklarbar AI" tittel="Signaler bak varselet" hoyre={<span className="tall text-xs text-slate-500">{v.score} av 100 poeng</span>}>
-              <ScoreForklaring faktorer={v.faktorer} score={v.score} />
-              <ul className="space-y-3">
-                {faktorer.map((f) => (
-                  <li key={f.id} className={f.poeng === 0 && !f.ukjent ? "opacity-45" : ""}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-slate-900">{f.navn}</span>
-                      <span className="tall text-xs text-slate-500">
-                        {f.ukjent ? "?" : f.poeng}/{f.maks}
-                      </span>
-                    </div>
-                    <div className="my-1 h-1 overflow-hidden rounded-full bg-slate-100">
-                      <div className={`h-full ${f.ukjent ? "bg-slate-300" : "bg-teal-600"}`} style={{ width: `${f.ukjent ? 100 : (f.poeng / f.maks) * 100}%`, opacity: f.ukjent ? 0.4 : 1 }} />
-                    </div>
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-xs text-slate-600">{f.forklaring}</span>
-                      <KildeTag kilde={f.kilde} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
+            <Kort overtittel="Forklarbar AI" tittel="Signaler bak varselet">
+              <ScoreForklaring faktorer={v.faktorer} score={v.score} niva={v.niva} />
             </Kort>
 
             <Kort overtittel="Personvern" tittel="Datagrunnlag og samtykke" hoyre={<SamtykkeMerke niva={kunde.samtykke} />}>
