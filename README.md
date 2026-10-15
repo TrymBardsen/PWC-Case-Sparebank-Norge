@@ -1,6 +1,7 @@
 # PWC-Case-Sparebank-Norge
 
 Om Sparebanken Norge
+
 En av Norges største sparebanker, med finansielle tjenester til privatpersoner og bedrifter over hele landet. Sterke lokale relasjoner, høy tillit og et landsdekkende rådgivernettverk gir nærhet til kundene.
 Oppgaven: Fremtidsbile 2027
 Alle har tilgang til AI, og mange bedriftskunder har egne AI-verktøy. Sparebanken Norge vil fortsatt ha ekte mennesker i kundefront som konkurransefortrinn. Utvikle en løsning som gjør rådgiveren til en AI-forsterket superhelt og gir kunden mer verdi enn generelle AI-verktøy alene. Tenk radikalt om fremtidens rådgivning. Vis hva som kan prøves ut i 2027, og hvilke antakelser om teknologi, data og kundeadferd det langsiktige konseptet bygger på.
