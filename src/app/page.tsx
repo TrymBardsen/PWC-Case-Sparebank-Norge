@@ -185,7 +185,7 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
   );
 
   const kritiskeKunder = rader.filter((r) => r.v.niva === "Kritisk").map((r) => ({ navn: r.k.navn, dato: r.v.prognose.tomKasseDato }));
-  return <PortefoljeModus radgiver={portefolje.radgiver} medAi={medAi} utenAi={<UtenAi kunder={portefolje.kunder} kritiske={kritiskeKunder} />} />;
+  return <PortefoljeModus medAi={medAi} utenAi={<UtenAi kunder={portefolje.kunder} kritiske={kritiskeKunder} />} />;
 }
 
 function GronneMuligheter({ kunder, gronn }: { kunder: Kunde[]; gronn: Map<string, GronnVurdering> }) {

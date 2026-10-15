@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
-import { hentMakro } from "@/lib/makro";
 import { langDato } from "@/lib/dato";
 import { hentVurderinger, portefolje } from "@/lib/data";
 import { Faner } from "@/components/Faner";
@@ -15,8 +14,7 @@ export const metadata: Metadata = {
   description: "Tidligvarsling av likviditetsskvis for rådgivere i bedriftsmarkedet",
 };
 
-export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const makro = await hentMakro();
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   // «Kundeanalyse» åpner kunden som trenger rådgiveren mest
   const { vurderinger } = hentVurderinger();
   const toppKunde = [...vurderinger.values()].sort((a, b) => b.score - a.score)[0]?.kundeId;
@@ -35,16 +33,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                 <span className="block text-xs text-slate-600">Bedriftsmarked · Rådgiverens arbeidsflate</span>
               </span>
             </Link>
-            <div className="ml-auto flex flex-wrap items-center gap-4 text-xs text-slate-600">
-              <span title={`Norges Bank, ${makro.styringsrenteDato}`}>
-                Styringsrente <b className="tall text-slate-800">{makro.styringsrente.toFixed(2).replace(".", ",")} %</b>
-                {makro.live.rente && <span className="ml-1 text-snb-gronn">●</span>}
-              </span>
-              <span title={`hvakosterstrommen.no, snitt ${makro.stromDato}`}>
-                Strøm NO5 <b className="tall text-slate-800">{makro.stromNO5.toFixed(2).replace(".", ",")} kr/kWh</b>
-                {makro.live.strom && <span className="ml-1 text-snb-gronn">●</span>}
-              </span>
-            </div>
           </div>
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-6 pb-4 text-sm text-slate-600">
             <span className="rounded-full bg-snb-rod-lys px-3 py-1 text-xs font-semibold text-snb-rod">Prototype · fiktive data</span>
