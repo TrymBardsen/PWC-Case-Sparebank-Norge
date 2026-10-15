@@ -22,6 +22,9 @@ Generelle AI-verktøy kan forklare regnskapstall, foreslå spørsmål og lage pl
 - **Tiltak som kan prøves ut:** Prognosen viser anslått effekt av mulige tiltak og en anbefalt pakke. Forutsetninger og forbehold må vurderes av rådgiveren og kunden.
 - **Mennesket i kundefront:** AI kan lage et utkast til samtaleunderlag basert på beregnede fakta. Rådgiveren kontrollerer og tilpasser det; AI tar ikke beslutningen.
 - **Lokal innsikt og nettverk:** Rådgiveren kan se avhengigheter mellom bedrifter i porteføljen og supplere bildet med åpne virksomhets- og makrodata.
+- **Signaler i tekst:** Rådgivernotater, e-post fra kunden og nyheter analyseres for signaler som tallene ikke viser ennå, for eksempel at en stor kunde lyser ut anbud. Hvert signal viser et ordrett sitat som kontrolleres mot kilden.
+- **Dagens agenda:** Startsiden gjør porteføljen om til konkrete oppgaver med neste handling, meldingsutkast og møtebooking, og viser anslått spart forberedelsestid. En før/etter-visning viser samme morgen uten verktøyet.
+- **Grønn omstilling som likviditetstiltak:** For energiintensive kunder og kunder med klimakrav fra egne kunder beregnes energitiltak med Enova-støtte og grønt lån: besparelse, tilbakebetalingstid, CO₂ og effekt på prognosen.
 
 Arbeidsflyten er **oppdag → forstå → handle**. Målet er ikke å erstatte rådgiveren, men å gi mer tid til dialog, skjønn og tillit – områder et generelt AI-verktøy ikke kan levere alene.
 
@@ -60,10 +63,12 @@ Den langsiktige visjonen bygger på hypoteser som må testes – ikke på at all
 | Styringsrente og strømpris i NO5 | Makro- og scenarioinformasjon | Norges Bank og hvakosterstrommen.no |
 | Betalingsanmerkninger og inkasso | Risikosignal | Simulert tredjepartsdata |
 | Notater og kunderelasjoner | Samtalekontekst og porteføljeavhengighet | Syntetiske data |
+| E-post fra kunder, nyheter og kunngjøringer | Tekstsignaler i scoren og agendaen | Simulerte tekster |
+| Energiforbruk og energitiltak (investering, Enova-anslag) | Grønne muligheter og effekt på prognosen | Syntetiske anslag |
 
 Prototypen viser tre **konseptuelle** samtykkenivåer: bank/offentlige data, regnskapsdata og eierens privatøkonomi. Dette er ikke en implementert samtykke- eller tilgangskontroll.
 
-**Ikke bruk ekte eller personidentifiserbare kundedata i denne demoen.** Kundene og bankdataene er syntetiske, men de åpne API-oppslagene bruker ekte offentlige data. Hvis `ANTHROPIC_API_KEY` er satt, sendes kundens samtalefakta – blant annet navn, rådgivernotater, debitorer og beregnede tall – fra serveren til Anthropic for å generere et utkast. Bruk bare syntetiske data med denne funksjonen. En produksjonsløsning krever egen sikkerhets-, personvern-, leverandør- og regulatorisk vurdering, samt dataminimering og passende tilgangskontroller.
+**Ikke bruk ekte eller personidentifiserbare kundedata i denne demoen.** Kundene og bankdataene er syntetiske, men de åpne API-oppslagene bruker ekte offentlige data. Hvis `ANTHROPIC_API_KEY` er satt, sendes kundens samtalefakta – blant annet navn, rådgivernotater, debitorer og beregnede tall – fra serveren til Anthropic for å generere et utkast. Tekstanalysen sender tilsvarende kundens notater, e-post og nyheter. Bruk bare syntetiske data med denne funksjonen. En produksjonsløsning krever egen sikkerhets-, personvern-, leverandør- og regulatorisk vurdering, samt dataminimering og passende tilgangskontroller.
 
 ## Kom i gang
 
@@ -86,16 +91,20 @@ Uten API-nøkkel brukes en regelbasert mal. For å prøve Claude:
 
 API-nøkkelen brukes server-side. Husk at samtalefakta sendes til Anthropic når funksjonen brukes; se **Data og ansvarlig bruk**.
 
+Tekstanalysen kan kjøres med Claude per kunde («Analyser med Claude» på kundesiden) eller for alle med `npm run tekstsignaler`. Resultatet lagres i `data/tekstsignaler.json` og brukes i scoren. Uten nøkkel brukes en regelbasert ordliste. Uansett forkastes signaler der sitatet ikke finnes ordrett i kilden.
+
 ## Demo
 
-En foreslått gjennomgang på omtrent fire minutter:
+En foreslått gjennomgang på omtrent fem minutter:
 
-1. **Porteføljen:** Vis risikorangeringen, og hvorfor en kunde som ikke selv har tatt kontakt bør følges opp.
-2. **Fjellsiden Bygg:** Åpne prognosen og vis når insolvensgrensen kan passeres, samt hvilke forfall som driver utviklingen.
+1. **Før og etter:** Start i «Uten Likviditetsradar» (kundeliste og innboks), og bytt til «Med Likviditetsradar». Vis dagens agenda og anslått spart forberedelsestid.
+2. **Fjellsiden Bygg:** Åpne prognosen og vis når insolvensgrensen kan passeres, samt hvilke forfall som driver utviklingen. Vis tekstsignalene og sitatene i kildene.
 3. **Scenario:** Simuler at en stor kunde betaler senere, og vis hvordan det påvirker likviditeten.
 4. **Tiltak:** Sammenlign betalingslettelser og kostnadstiltak med den anbefalte pakken. Vis effekt og forbehold.
 5. **Samtaleunderlag:** Generer eller åpne utkastet. Poengter at rådgiveren kontrollerer fakta og står for samtalen og beslutningen.
-6. **Porteføljeeffekt og åpne data:** Vis hvordan en krise kan påvirke en annen bedrift, og prøv et oppslag i Enhetsregisteret.
+6. **Tekst før tall:** Bergenhus Transport ser stabil ut i tallene, men tekstanalysen har funnet anbudet hos kunden som står for 55 % av innbetalingene.
+7. **Grønn omstilling:** Solheimsviken Verksted har klimakrav fra Fjord Line. Vis energitiltaket med grønt lån og Enova, og effekten på prognosen.
+8. **Porteføljeeffekt og åpne data:** Vis hvordan en krise kan påvirke en annen bedrift, og at meldingsutkastet ikke nevner andre kunder i banken. Prøv et oppslag i Enhetsregisteret.
 
 Demoen bruker fast dato **15. oktober 2026** for syntetiske scenarioer. Makrodata og oppslag mot åpne registre kan være reelle og oppdateres uavhengig av demo-datoen.
 
@@ -105,13 +114,14 @@ Demoen bruker fast dato **15. oktober 2026** for syntetiske scenarioer. Makrodat
 npm run data                 # Genererer data/portefolje.json
 npm run sjekk                # Skriver ut score og prognose for alle kunder
 npm run sjekk fjellsiden-bygg # Skriver ut resultat for én kunde
+npm run tekstsignaler        # Tekstanalyse med Claude for alle kunder (krever API-nøkkel)
 ```
 
 Kundeprofilene ligger i `scripts/generer-data.ts`. Demo-datoen settes i `src/lib/dato.ts`.
 
 ## Teknologi og struktur
 
-Bygget med Next.js, React, TypeScript og Recharts. Prognosen og risikoscoren er regelbaserte og beregnes i applikasjonen; Claude brukes bare til å lage et strukturert samtaleutkast når API-nøkkel er konfigurert.
+Bygget med Next.js, React, TypeScript og Recharts. Prognosen og risikoscoren er regelbaserte og beregnes i applikasjonen. Claude brukes til tekstanalyse og til et strukturert samtaleutkast når API-nøkkel er konfigurert; begge har en regelbasert reserve.
 
 | Fil | Ansvar |
 |---|---|
@@ -121,4 +131,7 @@ Bygget med Next.js, React, TypeScript og Recharts. Prognosen og risikoscoren er 
 | `src/lib/score.ts` | Forklarbar prioriteringsscore og porteføljeavhengigheter |
 | `src/lib/brief.ts` | Fakta til samtaleutkast, validering og regelbasert reserve |
 | `src/lib/brreg.ts` | Oppslag mot Enhetsregisteret og Regnskapsregisteret |
+| `src/lib/tekst.ts`, `src/lib/tekstAi.ts` | Tekstsignaler (regelbasert og Claude) med kontroll av sitater |
+| `src/lib/gronn.ts` | Energitiltak med Enova-støtte og grønt lån, lønnsomhet og likviditetseffekt |
+| `src/lib/agenda.ts` | Dagens agenda: neste handling, meldingsutkast og anslått spart tid |
 | `scripts/generer-data.ts` | Syntetisk demoportefølje |

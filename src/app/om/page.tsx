@@ -11,9 +11,9 @@ export default function Om() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Steg nr={1} tittel="Oppdag" tekst="Prioriteringsliste med forklarbar score. Hver kunde viser hvilke signaler som trekker opp." />
+        <Steg nr={1} tittel="Oppdag" tekst="Dagens agenda og forklarbar score. AI leser notater, e-post og nyheter og finner signaler før tallene viser dem." />
         <Steg nr={2} tittel="Forstå" tekst="13-ukers prognose dag for dag, med kjente forfall (lønn, MVA, skatt, avdrag) og kundens egne fakturaer." />
-        <Steg nr={3} tittel="Handle" tekst="Scenarioer, tiltak med effekt i kroner, og et AI-utkast til samtaleunderlag. Rådgiveren beslutter." />
+        <Steg nr={3} tittel="Handle" tekst="Tiltak med effekt i kroner, grønne investeringer som styrker likviditeten, meldingsutkast og samtaleunderlag. Rådgiveren beslutter." />
       </div>
 
       <Kort tittel="Hvordan prognosen virker">
