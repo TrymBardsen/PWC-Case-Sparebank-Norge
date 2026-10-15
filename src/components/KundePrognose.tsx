@@ -20,7 +20,7 @@ interface Scenario {
   tilValg: (verdi: number) => number;
 }
 
-// mote: visning for kunden i møtet. Ingen interne vurderinger (anbefalt pakke, betalingslettelse,
+// mote: kundevisningen (visning for kunden i møtet). Ingen interne vurderinger (anbefalt pakke, betalingslettelse,
 // bankens forbehold) og nøytrale ord («kassekredittrammen» i stedet for «insolvensgrensen»).
 // Oppsett: prognosen står fast til venstre mens rådgiveren velger tiltak og scenarioer til høyre (bred skjerm).
 // «venstre» og «hoyre» er resten av kundesiden, som legges under prognosedelen.

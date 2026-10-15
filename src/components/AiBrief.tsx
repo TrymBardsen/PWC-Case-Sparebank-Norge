@@ -46,7 +46,7 @@ export function AiBrief({ kundeId }: { kundeId: string }) {
             disabled={laster}
             className="rounded-md bg-snb-rod px-5 py-2.5 text-sm font-semibold text-white hover:bg-snb-rod-mork disabled:opacity-60"
           >
-            {laster ? "Forbereder …" : "Forbered samtale"}
+            {laster ? "Lager underlag …" : "Lag samtaleunderlag"}
           </button>
         </div>
       )}

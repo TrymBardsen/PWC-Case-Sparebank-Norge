@@ -6,9 +6,9 @@ import { DAGENS_DATO, langDato } from "@/lib/dato";
 import { mnok, prosent } from "@/lib/format";
 import { KundePrognose } from "@/components/KundePrognose";
 
-// Møtemodus: skjermen rådgiveren viser kunden. Bare kundens egne tall, prognose og tiltak.
+// Kundevisning (startes med «Start kundemøte» under Forbered samtale): skjermen rådgiveren viser kunden. Bare kundens egne tall, prognose og tiltak.
 // Ingen risikoscore, risikoklasse, tekstsignaler, notater eller andre kunder i banken.
-export default async function Motemodus({ params }: { params: Promise<{ id: string }> }) {
+export default async function Kundevisning({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const kunde = hentKunde(id);
   if (!kunde) notFound();
@@ -30,10 +30,10 @@ export default async function Motemodus({ params }: { params: Promise<{ id: stri
           </div>
         </div>
         <Link
-          href={`/kunde/${kunde.id}`}
+          href={`/kunde/${kunde.id}?fane=samtale`}
           className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:border-snb-rod hover:text-snb-rod print:hidden"
         >
-          Avslutt møtemodus
+          Avslutt kundevisning
         </Link>
       </div>
 

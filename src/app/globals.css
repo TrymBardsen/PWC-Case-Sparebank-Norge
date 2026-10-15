@@ -8,6 +8,7 @@
   --snb-rod: #ff4238;
   --snb-rod-mork: #d9362d;
   --snb-rod-lys: #fff4f3;
+  --snb-rod-flate: #fdded8;
   --snb-gronn: #006858;
   --snb-gronn-mid: #2e8b7a;
   --snb-gronn-lys: #edf7f5;
@@ -25,6 +26,7 @@
   --color-snb-rod: var(--snb-rod);
   --color-snb-rod-mork: var(--snb-rod-mork);
   --color-snb-rod-lys: var(--snb-rod-lys);
+  --color-snb-rod-flate: var(--snb-rod-flate);
   --color-snb-gronn: var(--snb-gronn);
   --color-snb-gronn-mid: var(--snb-gronn-mid);
   --color-snb-gronn-lys: var(--snb-gronn-lys);

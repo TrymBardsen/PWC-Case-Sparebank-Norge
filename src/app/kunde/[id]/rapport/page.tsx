@@ -17,8 +17,8 @@ export default async function Rapportside({ params }: { params: Promise<{ id: st
   return (
     <div className="space-y-6">
       <div className="print:hidden">
-        <Link href={`/kunde/${kunde.id}`} className="text-sm font-semibold text-snb-rod hover:underline">
-          ← Tilbake til kundeanalysen
+        <Link href={`/kunde/${kunde.id}?fane=samtale`} className="text-sm font-semibold text-snb-rod hover:underline">
+          ← Tilbake til Forbered samtale
         </Link>
         <div className="overtittel mt-3 mb-1">Før samtalen</div>
         <h1 className="font-overskrift text-3xl font-bold text-snb-rod">Møterapport: {kunde.navn}</h1>
