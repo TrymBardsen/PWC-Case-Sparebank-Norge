@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { hentVurderinger, portefolje } from "@/lib/data";
-import { DAGENS_DATO, dagerMellom, kortDato } from "@/lib/dato";
+import { dagerSiden, kortDato } from "@/lib/dato";
 import { kr, mnok, omUker, prosent } from "@/lib/format";
 import { Kort, SamtykkeMerke, ScoreMerke, Utnyttelse } from "@/components/ui";
 import { hentMakro } from "@/lib/makro";
@@ -13,7 +13,8 @@ import type { Kunde } from "@/lib/types";
 // Dynamisk, så lagrede tekstanalyser slår inn i scoren med en gang
 export const dynamic = "force-dynamic";
 
-export default async function Portefoljeside() {
+export default async function Portefoljeside({ searchParams }: { searchParams: Promise<{ alle?: string }> }) {
+  const visAlle = (await searchParams).alle === "1";
   const { vurderinger, smitte } = hentVurderinger();
   const makro = await hentMakro();
   const gronn = new Map<string, GronnVurdering>();
@@ -29,9 +30,9 @@ export default async function Portefoljeside() {
   const kritiske = rader.filter((r) => r.v.niva === "Kritisk").length;
   const hoye = rader.filter((r) => r.v.niva === "Høy").length;
   const tomInnen8 = rader.filter((r) => r.v.prognose.ukerTilTomKasse !== null && r.v.prognose.ukerTilTomKasse <= 8).length;
-  const glemte = rader.filter((r) => dagerMellom(r.k.sisteKontakt, DAGENS_DATO) > 120).length;
+  const glemte = rader.filter((r) => (dagerSiden(r.k.sisteKontakt) ?? Infinity) > 365).length;
   const totalRamme = portefolje.kunder.reduce((s, k) => s + k.kassekredittRamme, 0);
-  const totalBrukt = rader.reduce((s, r) => s + Math.max(0, -r.k.dagligSaldo[r.k.dagligSaldo.length - 1].saldo), 0);
+  const totalBrukt = rader.reduce((s, r) => s + r.k.kassekredittTrekk[r.k.kassekredittTrekk.length - 1], 0);
   const aktivSmitte = smitte.filter((s) => (vurderinger.get(s.fra)?.score ?? 0) >= 50);
 
   const medAi = (
@@ -42,11 +43,18 @@ export default async function Portefoljeside() {
         <Nokkeltall tittel="Kritisk" verdi={kritiske} farge="text-red-600" />
         <Nokkeltall tittel="Høy prioritet" verdi={hoye} farge="text-orange-500" />
         <Nokkeltall tittel="Passerer insolvensgrensen innen 8 uker" verdi={tomInnen8} />
-        <Nokkeltall tittel="Ikke kontaktet på 4 mnd" verdi={glemte} />
+        <Nokkeltall tittel="Ikke kontaktet siste år" verdi={glemte} />
         <Nokkeltall tittel="Kassekreditt brukt" verdi={`${Math.round((totalBrukt / totalRamme) * 100)} %`} under={`${mnok(totalBrukt)} av ${mnok(totalRamme)}`} />
       </div>
 
-      <Kort tittel="Prioriteringsliste">
+      <Kort
+        tittel={`Prioriteringsliste · ${visAlle ? `alle ${rader.length}` : `topp ${Math.min(30, rader.length)} av ${rader.length}`} kunder`}
+        hoyre={
+          <Link href={visAlle ? "/" : "/?alle=1"} className="text-xs text-teal-700 hover:underline">
+            {visAlle ? "Vis bare de 30 viktigste" : `Vis alle ${rader.length}`}
+          </Link>
+        }
+      >
         <div className="-mx-5 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -61,9 +69,9 @@ export default async function Portefoljeside() {
               </tr>
             </thead>
             <tbody>
-              {rader.map(({ k, v }) => {
+              {(visAlle ? rader : rader.slice(0, 30)).map(({ k, v }) => {
                 const toppFaktorer = [...v.faktorer].filter((f) => f.poeng > 0).sort((a, b) => b.poeng - a.poeng).slice(0, 2);
-                const dager = dagerMellom(k.sisteKontakt, DAGENS_DATO);
+                const dager = dagerSiden(k.sisteKontakt);
                 return (
                   <tr key={k.id} className="group border-b border-slate-100 align-top last:border-0 hover:bg-slate-50">
                     <td className="py-3 pl-5 pr-3">
@@ -74,6 +82,11 @@ export default async function Portefoljeside() {
                         {k.navn}
                       </Link>
                       <div className="text-xs text-slate-500">{k.bransje}{k.sesongbedrift ? " · sesongbedrift" : ""}</div>
+                      {k.sensitiv && (
+                        <div className="mt-1 inline-block rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-800 ring-1 ring-violet-200 ring-inset" title={k.sensitiv}>
+                          Sensitiv situasjon – kun praktisk kontakt
+                        </div>
+                      )}
                     </td>
                     <td className="max-w-md px-3 py-3 text-xs text-slate-700">
                       {toppFaktorer.length ? (
@@ -106,8 +119,8 @@ export default async function Portefoljeside() {
                     <td className="px-3 py-3">
                       <Utnyttelse andel={v.kkUtnyttelse} />
                     </td>
-                    <td className={`tall px-3 py-3 text-xs whitespace-nowrap ${dager > 120 ? "font-medium text-orange-600" : "text-slate-600"}`}>
-                      {dager} dager siden
+                    <td className={`tall px-3 py-3 text-xs whitespace-nowrap ${dager === null || dager > 365 ? "font-medium text-orange-600" : "text-slate-600"}`}>
+                      {dager === null ? "Ingen registrert" : `${dager} dager siden`}
                     </td>
                     <td className="px-3 py-3 pr-5">
                       <SamtykkeMerke niva={k.samtykke} />
@@ -146,7 +159,8 @@ export default async function Portefoljeside() {
     </div>
   );
 
-  return <PortefoljeModus medAi={medAi} utenAi={<UtenAi kunder={portefolje.kunder} />} />;
+  const kritiskeKunder = rader.filter((r) => r.v.niva === "Kritisk").map((r) => ({ navn: r.k.navn, dato: r.v.prognose.tomKasseDato }));
+  return <PortefoljeModus radgiver={portefolje.radgiver} medAi={medAi} utenAi={<UtenAi kunder={portefolje.kunder} kritiske={kritiskeKunder} />} />;
 }
 
 function GronneMuligheter({ kunder, gronn }: { kunder: Kunde[]; gronn: Map<string, GronnVurdering> }) {
@@ -203,26 +217,30 @@ function GronneMuligheter({ kunder, gronn }: { kunder: Kunde[]; gronn: Map<strin
 }
 
 // «Før»: kundeliste i alfabetisk rekkefølge og en innboks. Ingen prognose, ingen prioritering.
-function UtenAi({ kunder }: { kunder: Kunde[] }) {
+function UtenAi({ kunder, kritiske }: { kunder: Kunde[]; kritiske: { navn: string; dato: string | null }[] }) {
+  // Hendelser som kommer inn uten sortering eller kobling til kundens situasjon
   const innboks = kunder
-    .flatMap((k) => k.tekster.filter((t) => t.type === "epost").map((t) => ({ ...t, kunde: k.navn })))
-    .sort((a, b) => b.dato.localeCompare(a.dato));
+    .flatMap((k) => k.tekster.map((t) => ({ ...t, kunde: k.navn })))
+    .sort((a, b) => b.dato.localeCompare(a.dato))
+    .slice(0, 15);
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 text-sm text-slate-700">
-        Uten Likviditetsradar er det kunden som tar kontakt når pengene er brukt opp. Fjellsiden Bygg ville trolig ringt rundt 20. november, da lønnen ikke gikk
-        gjennom. Bergenhus Transport sitt anbud står i en e-post, og ingen ser at underleverandørene til Fjellsiden også rammes.
+        Uten Likviditetsradar er det kunden som tar kontakt når pengene er brukt opp. {kunder.length} kunder i alfabetisk rekkefølge og en strøm av
+        registerhendelser gir ingen prioritering.{" "}
+        {kritiske.length > 0 &&
+          `${kritiske.map((k) => k.navn).join(", ")} er allerede kritiske, men ingenting her viser det før de selv tar kontakt.`}
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Kort tittel={`Innboks (${innboks.length} uleste)`}>
+        <Kort tittel="Siste hendelser (usortert)">
           <ul className="space-y-3">
             {innboks.map((t) => (
               <li key={t.id} className="text-sm">
                 <div className="flex justify-between gap-2 text-xs text-slate-500">
-                  <span className="font-medium text-slate-800">{t.avsender}</span>
+                  <span className="font-medium text-slate-800">{t.kunde}</span>
                   <span>{kortDato(t.dato)}</span>
                 </div>
-                <div className="text-xs font-medium text-slate-700">{t.tittel}</div>
+                <div className="text-xs font-medium text-slate-700">{t.avsender}</div>
                 <div className="line-clamp-2 text-xs text-slate-500">{t.tekst}</div>
               </li>
             ))}

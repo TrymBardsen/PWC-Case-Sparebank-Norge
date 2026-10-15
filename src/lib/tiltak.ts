@@ -45,7 +45,7 @@ const rund = (x: number, til = 100_000) => Math.round(x / til) * til;
 export function tiltakFor(kunde: Kunde, parametre: Parametre = {}): Tiltak[] {
   const fakturaer = kunde.fakturaer;
   const forfalte = (fakturaer ?? []).filter((f) => dagerMellom(f.forfall, DAGENS_DATO) > 0);
-  const tregeDebitorer = kunde.debitorer.some((d) => d.snittDagerForsinkelse > 10);
+  const tregeDebitorer = kunde.debitorer.some((d) => (d.snittDagerForsinkelse ?? 0) > 10);
   const kkBrukt = Math.max(0, -kunde.dagligSaldo[kunde.dagligSaldo.length - 1].saldo);
   const fakturaSum = (fakturaer ?? []).reduce((s, f) => s + f.belop, 0);
   const maksBelop = Math.max(1_000_000, rund(kunde.kassekredittRamme * 2));

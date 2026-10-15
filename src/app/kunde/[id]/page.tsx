@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { hentKunde, hentVurderinger, portefolje } from "@/lib/data";
 import { hentMakro } from "@/lib/makro";
-import { DAGENS_DATO, dagerMellom, kortDato } from "@/lib/dato";
+import { DAGENS_DATO, dagerMellom, dagerSiden, kortDato } from "@/lib/dato";
 import { kr, mnok, prosent } from "@/lib/format";
 import { KildeTag, Kort, SamtykkeMerke, ScoreMerke, Utnyttelse } from "@/components/ui";
 import { KundePrognose } from "@/components/KundePrognose";
@@ -43,7 +43,12 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
               {kunde.naceKode} · {kunde.ansatte} ansatte · etablert {kunde.etablert} · daglig leder {kunde.dagligLeder}
             </p>
             <p className="text-xs text-slate-500">
-              Org.nr. {kunde.orgnr} (fiktivt) · {kunde.adresse} · risikoklasse {kunde.risikoklasse}
+              Org.nr. {kunde.orgnr} (fiktivt) · {kunde.adresse} · {kunde.segment} · {kunde.eierstruktur.toLowerCase()} · kunde siden {kunde.kundeSiden} · risikoklasse{" "}
+              {kunde.risikoklasse}
+            </p>
+            <p className="text-xs text-slate-500">
+              Omsetning {kunde.regnskapIFjor.omsetning.map((o) => `${o.aar}: ${mnok(o.belop)}`).join(" · ")} · driftsresultat 2025 {mnok(kunde.regnskapIFjor.driftsresultat)} ·
+              egenkapitalandel {prosent(kunde.regnskapIFjor.egenkapitalAndel)}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm sm:grid-cols-4">
@@ -52,10 +57,20 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
             </Info>
             <Info tittel="Lån" verdi={mnok(kunde.lan.reduce((s, l) => s + l.saldo, 0))} />
             <Info tittel="Sikkerheter" verdi={mnok(kunde.sikkerheter)} />
-            <Info tittel="Siste kontakt" verdi={`${dagerMellom(kunde.sisteKontakt, DAGENS_DATO)} dager`} />
+            <Info tittel="Siste kontakt" verdi={kunde.sisteKontakt ? `${dagerSiden(kunde.sisteKontakt)} dager` : "Ingen registrert"} />
           </div>
         </div>
       </div>
+
+      {kunde.sensitiv && (
+        <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-950">
+          <div className="font-semibold">Sensitiv situasjon – vær varsom med kontakt</div>
+          <p className="mt-0.5">{kunde.sensitiv}</p>
+          <p className="mt-1 text-xs text-violet-800">
+            Kunden er tatt ut av dagens agenda. Bruk tallene under som bakgrunn, men respekter det som er avtalt om kontakt.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
@@ -118,13 +133,13 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
 
           <Kort tittel="Datagrunnlag og samtykke" hoyre={<SamtykkeMerke niva={kunde.samtykke} />}>
             <ul className="space-y-2 text-sm">
-              <Datanivå pa tittel="1 · Bankdata og offentlige data" tekst="Konto, kassekreditt, lån, avviste betalinger, Brreg." />
+              <Datanivå pa tittel="1 · Bankdata og offentlige data" tekst="Konto og transaksjoner, kassekreditt, lån, sikkerheter, avviste betalinger, registerhendelser og SSB." />
               <Datanivå
                 pa={kunde.samtykke >= 2}
                 tittel="2 · Regnskapssystem"
-                tekst={kunde.samtykke >= 2 ? "Reskontro, leverandørgjeld og skatterestanser er med." : "Uten reskontro er prognosen bredere og vi ser ikke hvem som skylder penger."}
+                tekst={kunde.samtykke >= 2 ? `Reskontro og forfalt leverandørgjeld fra ${kunde.regnskapssystem ?? "regnskapssystemet"}.` : "Uten reskontro er prognosen bredere og vi ser ikke hvem som skylder penger."}
               />
-              <Datanivå pa={kunde.samtykke >= 3} tittel="3 · Eierens privatøkonomi" tekst="Kausjon, boliglån og pant. Eget samtykke." />
+              <Datanivå pa={kunde.samtykke >= 3} tittel="3 · Eierens privatøkonomi" tekst="Finnes ikke i datagrunnlaget (krever eget samtykke)." />
             </ul>
             {kunde.samtykke < 2 && (
               <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -164,7 +179,11 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
                   <span>{d.navn}</span>
                   <span className="tall text-xs text-slate-500">
                     {prosent(d.andelAvInnbetalinger)} ·{" "}
-                    <span className={d.snittDagerForsinkelse > 20 ? "font-medium text-red-600" : ""}>{d.snittDagerForsinkelse} d forsinket</span>
+                    {d.snittDagerForsinkelse === undefined ? (
+                      <span>forsinkelse ukjent</span>
+                    ) : (
+                      <span className={d.snittDagerForsinkelse > 20 ? "font-medium text-red-600" : ""}>{d.snittDagerForsinkelse} d forsinket</span>
+                    )}
                   </span>
                 </li>
               ))}

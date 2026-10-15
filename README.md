@@ -21,16 +21,16 @@ Generelle AI-verktøy kan forklare regnskapstall, foreslå spørsmål og lage pl
 - **Forklaring, ikke bare en score:** Rådgiveren kan se hvilke signaler som påvirker vurderingen, hvilke poster som driver prognosen, og hvordan scenarioer påvirker den.
 - **Tiltak som kan prøves ut:** Prognosen viser anslått effekt av mulige tiltak og en anbefalt pakke. Forutsetninger og forbehold må vurderes av rådgiveren og kunden.
 - **Mennesket i kundefront:** AI kan lage et utkast til samtaleunderlag basert på beregnede fakta. Rådgiveren kontrollerer og tilpasser det; AI tar ikke beslutningen.
-- **Lokal innsikt og nettverk:** Rådgiveren kan se avhengigheter mellom bedrifter i porteføljen og supplere bildet med åpne virksomhets- og makrodata.
-- **Signaler i tekst:** Rådgivernotater, e-post fra kunden og nyheter analyseres for signaler som tallene ikke viser ennå, for eksempel at en stor kunde lyser ut anbud. Hvert signal viser et ordrett sitat som kontrolleres mot kilden.
+- **Lokal innsikt og motpartsrisiko:** Kunder der en stor del av innbetalingene kommer fra én motpart med betalingsanmerkning, flagges. Bransjerisiko bygger på ekte konkursstatistikk fra SSB for Vestland.
+- **Signaler i tekst:** Møtenotater, CRM og registerhendelser (Brreg, Doffin, Aa-registeret, byggesak) analyseres for signaler som tallene ikke viser ennå. Hvert signal viser et ordrett sitat som kontrolleres mot kilden.
+- **Varsomhet i sensitive situasjoner:** Kunder der banken har lovet bare praktisk kontakt (for eksempel etter et dødsfall), tas ut av agendaen og får ingen salgs- eller tiltaksforslag.
 - **Dagens agenda:** Startsiden gjør porteføljen om til konkrete oppgaver med neste handling, meldingsutkast og møtebooking, og viser anslått spart forberedelsestid. En før/etter-visning viser samme morgen uten verktøyet.
-- **Grønn omstilling som likviditetstiltak:** For energiintensive kunder og kunder med klimakrav fra egne kunder beregnes energitiltak med Enova-støtte og grønt lån: besparelse, tilbakebetalingstid, CO₂ og effekt på prognosen.
 
 Arbeidsflyten er **oppdag → forstå → handle**. Målet er ikke å erstatte rådgiveren, men å gi mer tid til dialog, skjønn og tillit – områder et generelt AI-verktøy ikke kan levere alene.
 
 ## Prototype og 2027-pilot
 
-Prototypen viser én konkret kundesituasjon: likviditetsskvis hos en bedriftskunde. Den inneholder en portefølje med 14 fiktive Bergen-bedrifter, kundesider, prognoser, scenarioer, tiltak, porteføljeavhengigheter, virksomhetssøk og samtaleunderlag.
+Prototypen viser én konkret kundesituasjon: likviditetsskvis hos en bedriftskunde. Den inneholder en portefølje med 120 fiktive bedrifter i BM Bergen, kundesider, prognoser, scenarioer, tiltak, tekstsignaler, virksomhetssøk og samtaleunderlag.
 
 Et avgrenset forsøk i 2027 kan prøves ut med rådgivere i én region eller bransje, først i **skygge- eller beslutningsstøttemodus**. Rådgiveren vurderer varslene og dokumenterer om og hvorfor de er nyttige; løsningen kontakter ikke kunden eller fatter kredittbeslutninger automatisk.
 
@@ -57,18 +57,18 @@ Den langsiktige visjonen bygger på hypoteser som må testes – ikke på at all
 
 | Data | Bruk i prototypen | Kilde |
 |---|---|---|
-| Konto, saldo, lån, kassekreditt og avviste betalinger | Prognose og risikosignaler | Syntetiske bankdata |
-| Fakturaer, leverandørgjeld og skatte-/MVA-restanser | Nærhorisont i prognosen og risikosignaler | Syntetiske data, modellert som samtykkebasert regnskapsdata |
+| Bedrifter, regnskap, engasjement, kontakter og hendelser (inkl. møtenotater, restskatt, inkasso og motparter) | Kundebilde, score og tekstsignaler | `data/kundedata.json` (fiktiv kundebase) |
+| Daglig saldo, ukentlig kontantstrøm, betalere, lån, sikkerheter og avviste betalinger | Prognose og risikosignaler | `data/tilleggsdata.json` (syntetiske bankdata) |
+| Reskontro og forfalt leverandørgjeld | Nærhorisont i prognosen | `data/tilleggsdata.json`, bare for kunder med samtykke |
+| Konkurser per næring (Vestland og hele landet) | Bransjerisiko | SSB, ekte åpne data |
 | Bedriftsstatus og årsregnskap | Oppslag og kontekst | Brønnøysundregistrenes åpne API-er |
 | Styringsrente og strømpris i NO5 | Makro- og scenarioinformasjon | Norges Bank og hvakosterstrommen.no |
-| Betalingsanmerkninger og inkasso | Risikosignal | Simulert tredjepartsdata |
-| Notater og kunderelasjoner | Samtalekontekst og porteføljeavhengighet | Syntetiske data |
-| E-post fra kunder, nyheter og kunngjøringer | Tekstsignaler i scoren og agendaen | Simulerte tekster |
-| Energiforbruk og energitiltak (investering, Enova-anslag) | Grønne muligheter og effekt på prognosen | Syntetiske anslag |
+
+Grønn omstilling (energitiltak) og eierens privatøkonomi er skjult, fordi datagrunnlaget ikke har energidata eller privatøkonomi.
 
 Prototypen viser tre **konseptuelle** samtykkenivåer: bank/offentlige data, regnskapsdata og eierens privatøkonomi. Dette er ikke en implementert samtykke- eller tilgangskontroll.
 
-**Ikke bruk ekte eller personidentifiserbare kundedata i denne demoen.** Kundene og bankdataene er syntetiske, men de åpne API-oppslagene bruker ekte offentlige data. Hvis `ANTHROPIC_API_KEY` er satt, sendes kundens samtalefakta – blant annet navn, rådgivernotater, debitorer og beregnede tall – fra serveren til Anthropic for å generere et utkast. Tekstanalysen sender tilsvarende kundens notater, e-post og nyheter. Bruk bare syntetiske data med denne funksjonen. En produksjonsløsning krever egen sikkerhets-, personvern-, leverandør- og regulatorisk vurdering, samt dataminimering og passende tilgangskontroller.
+**Ikke bruk ekte eller personidentifiserbare kundedata i denne demoen.** Kundene og bankdataene er syntetiske, men de åpne API-oppslagene bruker ekte offentlige data. Hvis `ANTHROPIC_API_KEY` er satt, sendes kundens samtalefakta – blant annet navn, rådgivernotater, debitorer og beregnede tall – fra serveren til Anthropic for å generere et utkast. Tekstanalysen sender tilsvarende kundens notater og hendelser. Bruk bare syntetiske data med denne funksjonen. En produksjonsløsning krever egen sikkerhets-, personvern-, leverandør- og regulatorisk vurdering, samt dataminimering og passende tilgangskontroller.
 
 ## Kom i gang
 
@@ -97,31 +97,29 @@ Tekstanalysen kan kjøres med Claude per kunde («Analyser med Claude» på kund
 
 En foreslått gjennomgang på omtrent fem minutter:
 
-1. **Før og etter:** Start i «Uten Likviditetsradar» (kundeliste og innboks), og bytt til «Med Likviditetsradar». Vis dagens agenda og anslått spart forberedelsestid.
-2. **Fjellsiden Bygg:** Åpne prognosen og vis når insolvensgrensen kan passeres, samt hvilke forfall som driver utviklingen. Vis tekstsignalene og sitatene i kildene.
-3. **Scenario:** Simuler at en stor kunde betaler senere, og vis hvordan det påvirker likviditeten.
-4. **Tiltak:** Sammenlign betalingslettelser og kostnadstiltak med den anbefalte pakken. Vis effekt og forbehold.
-5. **Samtaleunderlag:** Generer eller åpne utkastet. Poengter at rådgiveren kontrollerer fakta og står for samtalen og beslutningen.
-6. **Tekst før tall:** Bergenhus Transport ser stabil ut i tallene, men tekstanalysen har funnet anbudet hos kunden som står for 55 % av innbetalingene.
-7. **Grønn omstilling:** Solheimsviken Verksted har klimakrav fra Fjord Line. Vis energitiltaket med grønt lån og Enova, og effekten på prognosen.
-8. **Porteføljeeffekt og åpne data:** Vis hvordan en krise kan påvirke en annen bedrift, og at meldingsutkastet ikke nevner andre kunder i banken. Prøv et oppslag i Enhetsregisteret.
+1. **Før og etter:** Start i «Uten Likviditetsradar» (kundeliste og usorterte hendelser), og bytt til «Med Likviditetsradar». Vis dagens agenda og anslått spart forberedelsestid.
+2. **Tindberg Tannklinikk:** Kassekreditten er full, restskatten på 421 000 kr er ubetalt, og prognosen passerer insolvensgrensen i dag med 95 % sannsynlighet. Vis hvilke forfall som driver utviklingen.
+3. **Tiltak:** Sammenlign betalingsavtale for MVA, avdragsfrihet og omgjøring av kassekreditt til lån med den anbefalte pakken. Vis effekt og forbehold.
+4. **Bjørkberg Vindu & Dør:** Kassekreditten har vært over 80 % utnyttet hver måned siden november 2025. Vis scenarioet «største kunde betaler senere».
+5. **Holmø Sjømat:** 62 % av innbetalingene kommer fra en motpart som har fått betalingsanmerkning, og møtenotatet sier det samme med kundens egne ord. Vis sitatene i kildene.
+6. **Kjerrland Tannhelse:** Sensitiv situasjon etter dødsfall. Kunden er tatt ut av agendaen, og samtaleunderlaget foreslår bare praktisk hjelp.
+7. **Samtaleunderlag og åpne data:** Generer utkastet, og prøv et oppslag i Enhetsregisteret.
 
-Demoen bruker fast dato **15. oktober 2026** for syntetiske scenarioer. Makrodata og oppslag mot åpne registre kan være reelle og oppdateres uavhengig av demo-datoen.
+Demoen bruker datoen i datagrunnlaget, **1. oktober 2026**. Makrodata og oppslag mot åpne registre kan være reelle og oppdateres uavhengig av demo-datoen.
 
 ## Datagenerering og kontroll
 
 ```bash
-npm run data                 # Genererer data/portefolje.json
 npm run sjekk                # Skriver ut score og prognose for alle kunder
-npm run sjekk fjellsiden-bygg # Skriver ut resultat for én kunde
+npm run sjekk B-114          # Skriver ut ukeprognosen for én kunde
 npm run tekstsignaler        # Tekstanalyse med Claude for alle kunder (krever API-nøkkel)
 ```
 
-Kundeprofilene ligger i `scripts/generer-data.ts`. Demo-datoen settes i `src/lib/dato.ts`.
+`src/lib/kundedata.ts` oversetter de to datafilene til appens kundemodell. Kildene er i kNOK og nynorsk; appen regner i kroner. Faste kostnader (lønn, skattetrekk, strøm, husleie, MVA) leses fra gjentakende betalinger i transaksjonene, ikke anslått.
 
-### Nytt datagrunnlag: kundedata og tilleggsdata
+### Datagrunnlag: kundedata og tilleggsdata
 
-`data/kundedata.json` er det nye grunnlaget: 120 fiktive bedrifter i BM Bergen per 2026-10-01 (bedrifter, engasjement, kontakter og hendelser). Fasit-arket er fjernet. Appen er ennå ikke bygget om til å bruke det.
+`data/kundedata.json` er grunnlaget: 120 fiktive bedrifter i BM Bergen per 2026-10-01 (bedrifter, engasjement, kontakter og hendelser). Fasit-arket er fjernet.
 
 `data/tilleggsdata.json` supplerer med data som en bank har i egne systemer, eller kan få med kundens samtykke:
 
@@ -149,13 +147,13 @@ Bygget med Next.js, React, TypeScript og Recharts. Prognosen og risikoscoren er 
 
 | Fil | Ansvar |
 |---|---|
-| `src/lib/prognose.ts` | Daglig 13-ukers prognose, usikkerhet og scenarioer |
+| `src/lib/kundedata.ts` | Leser kundedata.json og tilleggsdata.json inn i appens kundemodell |
+| `src/lib/prognose.ts` | Daglig 13-ukers prognose (samme uker i fjor × vekst), usikkerhet og scenarioer |
 | `src/lib/kalender.ts` | Kjente forfall for lønn, skatt/AGA, MVA, husleie, strøm og lån |
 | `src/lib/tiltak.ts` | Tiltak, beregnet effekt og anbefalte tiltakspakker |
 | `src/lib/score.ts` | Forklarbar prioriteringsscore og porteføljeavhengigheter |
 | `src/lib/brief.ts` | Fakta til samtaleutkast, validering og regelbasert reserve |
 | `src/lib/brreg.ts` | Oppslag mot Enhetsregisteret og Regnskapsregisteret |
 | `src/lib/tekst.ts`, `src/lib/tekstAi.ts` | Tekstsignaler (regelbasert og Claude) med kontroll av sitater |
-| `src/lib/gronn.ts` | Energitiltak med Enova-støtte og grønt lån, lønnsomhet og likviditetseffekt |
 | `src/lib/agenda.ts` | Dagens agenda: neste handling, meldingsutkast og anslått spart tid |
-| `scripts/generer-data.ts` | Syntetisk demoportefølje |
+| `scripts/lag-tilleggsdata.ts`, `scripts/hent-ssb.ts` | Genererer tilleggsdata og henter SSB-statistikk |

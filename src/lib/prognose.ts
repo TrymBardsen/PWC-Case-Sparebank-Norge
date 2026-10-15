@@ -2,9 +2,9 @@
 // spores tilbake til en historisk trend, en kjent utbetaling eller en faktura.
 //
 // Metode:
-//  1. Sesong: kundens egen profil fra i fjor, blandet 50/50 med bransjeprofilen.
-//  2. Nivå: vektet snitt av siste 12 uker (nyeste uker teller mest), sesongjustert.
-//  3. Trend: lineær trend siste 12 uker som videreføres, men dempes uke for uke.
+//  1. Sesong: kundens egen profil fra de to siste årene (transaksjonshistorikken).
+//  2. Normal drift: samme uke i fjor, justert med veksten siste 12 uker mot samme uker året før.
+//     (Med kortere historikk: vektet, sesongjustert nivå med dempet trend.)
 //  4. Kjente forfall på eksakt dato. MVA beregnes av faktisk omsetning i terminen.
 //  5. Reskontro (med samtykke) erstatter historikken de første fire ukene.
 //  6. Usikkerhet fra kundens egen uke-til-uke-variasjon, og sannsynligheten for
@@ -86,9 +86,12 @@ export interface PrognoseDag {
 }
 
 export interface Metode {
-  sesong: "egen og bransje" | "bransje";
+  sesong: "egen historikk" | "flat";
   nivaInnPerUke: number;
   nivaUtPerUke: number;
+  sesongnaiv: boolean; // samme uke i fjor × vekst
+  vekstInn: number; // siste 12 uker mot samme uker i fjor
+  vekstUt: number;
   trendPerUke: number; // relativ, f.eks. -0.02
   sigmaPerUke: number;
   mvaFraFaktisk: boolean;
@@ -133,20 +136,21 @@ function phi(x: number): number {
 const mndAv = (iso: string) => tilDato(iso).getUTCMonth();
 
 // Sesongprofil: egen historikk eldre enn 13 uker (så fallet nå ikke forveksles med sesong)
-function lagSesong(kunde: Kunde): { profil: number[]; egen: boolean } {
-  const bransje = kunde.sesongprofil;
+function lagSesong(kunde: Kunde, felt: "inn" | "utVariabel" = "inn"): { profil: number[]; egen: boolean } {
+  const grunnprofil = felt === "inn" ? kunde.sesongprofil : new Array(12).fill(1);
   const eldre = kunde.historikk.slice(0, -13);
   const perMnd = new Map<number, number[]>();
   for (const u of eldre) {
     const m = mndAv(leggTilDager(u.fra, 3));
-    perMnd.set(m, [...(perMnd.get(m) ?? []), u.inn]);
+    perMnd.set(m, [...(perMnd.get(m) ?? []), u[felt]]);
   }
   const mnder = [...perMnd.keys()].filter((m) => perMnd.get(m)!.length >= 3);
-  if (mnder.length < 6) return { profil: bransje, egen: false };
+  if (mnder.length < 6) return { profil: grunnprofil, egen: false };
   const snitt = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
   const egenSnitt = snitt(mnder.map((m) => snitt(perMnd.get(m)!)));
-  const bransjeSnitt = snitt(mnder.map((m) => bransje[m]));
-  const profil = bransje.map((b, m) => (mnder.includes(m) ? 0.5 * b + 0.5 * (snitt(perMnd.get(m)!) / egenSnitt) * bransjeSnitt : b));
+  if (egenSnitt <= 0) return { profil: grunnprofil, egen: false };
+  // Hver serie (innbetalinger og variable kostnader) får sin egen profil fra historikken
+  const profil = grunnprofil.map((b, m) => (mnder.includes(m) ? Math.max(0.2, snitt(perMnd.get(m)!) / egenSnitt) : b));
   return { profil, egen: true };
 }
 
@@ -235,23 +239,41 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
     hendelser.set(dato, liste);
   };
 
-  // 1. Normal drift: nivå × sesong × dempet trend
+  // 1. Normal drift. Med minst 65 uker historikk: samme uke i fjor × vekst (siste 12 uker mot
+  //    samme 12 uker året før). Ellers: sesongjustert nivå med dempet trend.
+  const h = kunde.historikk;
+  const sesongnaiv = h.length >= 65;
+  const vekst = (felt: "inn" | "utVariabel") => {
+    const naa = h.slice(-12).reduce((a, u) => a + u[felt], 0);
+    const fjor = h.slice(-64, -52).reduce((a, u) => a + u[felt], 0);
+    return fjor > 0 ? Math.min(2, Math.max(0.5, naa / fjor)) : 1;
+  };
+  const vekstInn = sesongnaiv ? vekst("inn") : 1;
+  // Variable kostnader følger aktiviteten: veksten kan avvike inntil ±25 % fra veksten i innbetalingene
+  const vekstUt = sesongnaiv ? Math.min(vekstInn * 1.25, Math.max(vekstInn * 0.75, vekst("utVariabel"))) : 1;
+  const ukeIFjor = (iso: string) => {
+    const ifjor = leggTilDager(iso, -364);
+    return h.find((u) => u.fra <= ifjor && ifjor <= leggTilDager(u.fra, 6));
+  };
   for (let iso = start; iso < slutt; iso = leggTilDager(iso, 1)) {
     if (ukedag(iso) >= 5) continue;
     const s = sesong[mndAv(iso)];
-    const h = dagerMellom(start, iso) / 7;
-    let innDag = (inn.niva * s * trendFaktor(inn.trend, h) * (1 - valg.omsetningsfall)) / 5;
+    const uke = sesongnaiv ? ukeIFjor(iso) : undefined;
+    const hh = dagerMellom(start, iso) / 7;
+    let innDag = uke ? (uke.inn * vekstInn) / 5 : (inn.niva * s * trendFaktor(inn.trend, hh)) / 5;
+    innDag *= 1 - valg.omsetningsfall;
     if (iso < blandingSlutt) innDag *= ANDEL_KONTANT_NAR_RESKONTRO;
     if (valg.storsteKundeForsinkelse > 0 && iso >= blandingSlutt && iso < forsinkelseSlutt) {
       innDag *= 1 - storste.andelAvInnbetalinger;
     }
     leggTil(iso, { navn: brukerReskontro && iso < blandingSlutt ? "Kontantsalg (anslag)" : "Innbetalinger (normalnivå)", belop: innDag, kategori: "salg" });
-    // Løpende factoring: nye fakturaer gir 80 % forskudd med en gang i stedet for etter ~30 dager.
+    // Løpende factoring: nye fakturaer gir forskudd med en gang i stedet for etter ~30 dager.
     if (valg.factoring && brukerReskontro && iso >= blandingSlutt) {
       if (iso < leggTilDager(blandingSlutt, 30)) leggTil(iso, { navn: "Factoring: forskudd på nye fakturaer", belop: innDag * valg.factoringForskudd, kategori: "factoring" });
       leggTil(iso, { navn: "Factoringgebyr (1,5 %)", belop: -innDag * 0.015, kategori: "factoring" });
     }
-    let utDag = (ut.niva * s * trendFaktor(ut.trend, h) * (1 - valg.omsetningsfall * 0.5)) / 5;
+    let utDag = uke ? (uke.utVariabel * vekstUt) / 5 : (ut.niva * s * trendFaktor(ut.trend, hh)) / 5;
+    utDag *= 1 - valg.omsetningsfall * 0.5;
     if (valg.kostnadskutt > 0 && iso >= leggTilDager(start, 14)) utDag *= 1 - valg.kostnadskutt;
     leggTil(iso, { navn: "Varekjøp og variable kostnader", belop: -utDag, kategori: "variabel" });
   }
@@ -307,6 +329,7 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
       if (valg.mvaAvtale) mvaTilAvtale(leggTilDager(start, 10), kunde.restanser.mva, "MVA-restanse");
       else leggTil(leggTilDager(start, 10), { navn: "MVA-restanse", belop: -kunde.restanser.mva, kategori: "restanse" });
     }
+    if (kunde.restanser.skatt > 0) leggTil(leggTilDager(start, 10), { navn: "Ubetalt restskatt", belop: -kunde.restanser.skatt, kategori: "restanse" });
     // Forskuddstrekk er de ansattes penger og kan ikke inngå i betalingsavtale
     if (kunde.restanser.forskuddstrekkOgAga > 0)
       leggTil(leggTilDager(start, 10), { navn: "Restanse forskuddstrekk/AGA", belop: -kunde.restanser.forskuddstrekkOgAga, kategori: "restanse" });
@@ -345,8 +368,8 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
       }
       if (dag === 15 && iso >= leggTilDager(start, 45)) {
         if (andel > 0) {
-          const kwh = kunde.faste.stromKwhPerMnd * andel;
-          leggTil(iso, { navn: "Spart strøm (energitiltak)", belop: (kunde.faste.stromPerMnd / kunde.faste.stromKwhPerMnd) * valg.stromFaktor * kwh + kwh * NETTLEIE_OG_AVGIFT, kategori: "tiltak" });
+          const kwh = (kunde.faste.stromKwhPerMnd ?? 0) * andel;
+          leggTil(iso, { navn: "Spart strøm (energitiltak)", belop: (kunde.faste.stromPerMnd / (kunde.faste.stromKwhPerMnd || 1)) * valg.stromFaktor * kwh + kwh * NETTLEIE_OG_AVGIFT, kategori: "tiltak" });
         }
         if (energi.annenBesparelsePerAar) leggTil(iso, { navn: "Spart drivstoff og vedlikehold", belop: energi.annenBesparelsePerAar / 12, kategori: "tiltak" });
       }
@@ -430,9 +453,12 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
     storsteDebitor: storste.navn,
     storsteDebitorAndel: storste.andelAvInnbetalinger,
     metode: {
-      sesong: egenSesong ? "egen og bransje" : "bransje",
+      sesong: egenSesong ? "egen historikk" : "flat",
       nivaInnPerUke: Math.round(inn.niva),
       nivaUtPerUke: Math.round(ut.niva),
+      sesongnaiv,
+      vekstInn,
+      vekstUt,
       trendPerUke: inn.trend,
       sigmaPerUke: Math.round(sigma),
       mvaFraFaktisk: true,

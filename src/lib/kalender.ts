@@ -48,7 +48,19 @@ export function kjentePoster(kunde: Kunde, fra: string, til: string, valg: Kalen
     if (dag === 1 && f.husleiePerMnd > 0) {
       poster.push({ dato: iso, navn: "Husleie", belop: f.husleiePerMnd, kategori: "husleie" });
     }
-    if (dag === 20 && f.bruttoLonnPerMnd > 0) {
+    if (f.perMnd) {
+      // Datadrevet: beløp fra samme måned i fjor (inkl. feriepenger, halv skatt og sesong)
+      if (dag === 20 && f.perMnd.lonn[mnd] > 0) {
+        poster.push({ dato: iso, navn: mnd === 5 ? "Lønn og feriepenger" : mnd === 11 ? "Lønn (halv skatt)" : "Lønn", belop: Math.round(f.perMnd.lonn[mnd]), kategori: "lonn" });
+      }
+      if (dag === 15 && f.perMnd.skattetrekkOgAga[mnd] > 0) {
+        poster.push({ dato: iso, navn: "Forskuddstrekk og arbeidsgiveravgift", belop: Math.round(f.perMnd.skattetrekkOgAga[mnd]), kategori: "skatt" });
+      }
+      if (dag === 15 && f.perMnd.strom[mnd] > 0) {
+        poster.push({ dato: iso, navn: "Strøm", belop: Math.round(f.perMnd.strom[mnd] * stromFaktor), kategori: "strom" });
+      }
+    }
+    if (!f.perMnd && dag === 20 && f.bruttoLonnPerMnd > 0) {
       // Desember: halv skatt gir høyere nettoutbetaling
       const andel = mnd === 11 ? 0.85 : 0.7;
       poster.push({
@@ -58,7 +70,7 @@ export function kjentePoster(kunde: Kunde, fra: string, til: string, valg: Kalen
         kategori: "lonn",
       });
     }
-    if (dag === 20 && mnd === 5 && f.bruttoLonnPerMnd > 0) {
+    if (!f.perMnd && dag === 20 && mnd === 5 && f.bruttoLonnPerMnd > 0) {
       poster.push({
         dato: iso,
         navn: "Feriepenger",
@@ -66,7 +78,7 @@ export function kjentePoster(kunde: Kunde, fra: string, til: string, valg: Kalen
         kategori: "feriepenger",
       });
     }
-    if (dag === 15 && SKATT_MANEDER.includes(mnd) && f.bruttoLonnPerMnd > 0) {
+    if (!f.perMnd && dag === 15 && SKATT_MANEDER.includes(mnd) && f.bruttoLonnPerMnd > 0) {
       poster.push({
         dato: iso,
         navn: "Forskuddstrekk og arbeidsgiveravgift",
@@ -74,7 +86,7 @@ export function kjentePoster(kunde: Kunde, fra: string, til: string, valg: Kalen
         kategori: "skatt",
       });
     }
-    if (dag === 15 && f.stromPerMnd > 0) {
+    if (!f.perMnd && dag === 15 && f.stromPerMnd > 0) {
       poster.push({ dato: iso, navn: "Strøm", belop: Math.round(f.stromPerMnd * stromFaktor), kategori: "strom" });
     }
     for (const m of MVA_FORFALL) {
@@ -92,8 +104,15 @@ export function kjentePoster(kunde: Kunde, fra: string, til: string, valg: Kalen
         });
       }
     }
+    // Sluttbetaling (restverdi) på lån og leasing som går ut i perioden
+    for (const lan of kunde.lan) {
+      if (lan.sluttdato === iso && (lan.sluttbetaling ?? 0) > 0) {
+        poster.push({ dato: iso, navn: `${lan.navn}: sluttbetaling`, belop: lan.sluttbetaling!, kategori: "lan" });
+      }
+    }
     if (dag === 20) {
       for (const lan of kunde.lan) {
+        if (lan.sluttdato && iso > lan.sluttdato) continue;
         const rente = Math.round((lan.saldo * (lan.rentesats + renteTillegg)) / 12);
         const avdrag = valg.utenAvdrag ? 0 : lan.avdragPerMnd;
         poster.push({

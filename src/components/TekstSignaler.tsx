@@ -8,7 +8,7 @@ import { langDato } from "@/lib/dato";
 import { prosent } from "@/lib/format";
 import { Kort } from "./ui";
 
-const TYPE_TEKST: Record<Tekstkilde["type"], string> = { notat: "Notat", epost: "E-post", nyhet: "Nyhet", kunngjoring: "Kunngjøring" };
+const TYPE_TEKST: Record<Tekstkilde["type"], string> = { notat: "Notat", epost: "E-post", nyhet: "Nyhet", kunngjoring: "Register", bank: "Bankdata" };
 
 function stilFor(s: Tekstsignal) {
   if (s.kategori === "grønn interesse") return "bg-emerald-50 text-emerald-800 ring-emerald-200";
@@ -54,7 +54,7 @@ export function TekstSignaler({ kundeId, kilder, analyse: start, debitorer }: { 
       }
     >
       <p className="mb-3 text-xs text-slate-500">
-        {kilder.length} kilder: rådgivernotater, e-post fra kunden, nyheter og kunngjøringer. Hvert signal peker på et ordrett sitat i kilden.
+        {kilder.length} kilder: møtenotater, CRM, bankhendelser og registre (Brreg, Doffin, Aa-registeret, byggesak). Hvert signal peker på et ordrett sitat i kilden.
       </p>
 
       {signaler.length === 0 ? (
@@ -107,7 +107,7 @@ export function TekstSignaler({ kundeId, kilder, analyse: start, debitorer }: { 
             <li key={k.id} className="rounded-lg bg-slate-50 p-3 text-xs">
               <div className="mb-1 text-slate-500">
                 {TYPE_TEKST[k.type]} · {k.avsender} · {langDato(k.dato)}
-                {k.type !== "notat" && <span className="ml-1 text-slate-400">(simulert)</span>}
+                
               </div>
               {k.tittel && <div className="font-medium text-slate-800">{k.tittel}</div>}
               <Uthevet tekst={k.tekst} sitater={signaler.filter((s) => s.kildeId === k.id).map((s) => s.sitat)} />

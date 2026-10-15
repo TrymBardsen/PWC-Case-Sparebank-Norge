@@ -32,7 +32,7 @@ export function vurderGronn(kunde: Kunde, stromprisKwh: number, scenario: Progno
   const e = kunde.energitiltak;
   if (!e) return null;
   const lanebelop = e.investering - e.enovaStotte;
-  const kwhSpartPerAar = kunde.faste.stromKwhPerMnd * 12 * e.besparelseAndel;
+  const kwhSpartPerAar = (kunde.faste.stromKwhPerMnd ?? 0) * 12 * e.besparelseAndel;
   const besparelsePerAar = kwhSpartPerAar * (stromprisKwh * scenario.stromFaktor + NETTLEIE_OG_AVGIFT) + (e.annenBesparelsePerAar ?? 0);
   const terminPerAar = lanebelop / GRONN_LOPETID_AAR + lanebelop * GRONN_RENTE;
 

@@ -21,7 +21,7 @@ const KILDE_STIL: Record<Kilde, string> = {
   Prognose: "bg-teal-50 text-teal-800 ring-teal-200",
   Bankdata: "bg-sky-50 text-sky-800 ring-sky-200",
   Regnskapssystem: "bg-violet-50 text-violet-800 ring-violet-200",
-  "Tredjepart (simulert)": "bg-slate-50 text-slate-600 ring-slate-200",
+  "Åpne data": "bg-amber-50 text-amber-800 ring-amber-200",
   Bransje: "bg-slate-50 text-slate-600 ring-slate-200",
   CRM: "bg-slate-50 text-slate-600 ring-slate-200",
   Tekstanalyse: "bg-fuchsia-50 text-fuchsia-800 ring-fuchsia-200",

@@ -46,7 +46,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           </div>
         </header>
         <div className="border-b border-amber-200 bg-amber-50 px-6 py-1.5 text-center text-xs text-amber-900">
-          Demo: kundene og bankdataene er fiktive og syntetiske. Enhetsregisteret, Regnskapsregisteret, styringsrente og strømpris er ekte, åpne data.
+          Demo: fiktiv kundebase (kundedata.json) og syntetiske bankdata (tilleggsdata.json). Konkursstatistikk (SSB), Enhetsregisteret, styringsrente og strømpris er ekte, åpne data.
         </div>
         <main className="mx-auto max-w-7xl px-6 py-6">{children}</main>
       </body>

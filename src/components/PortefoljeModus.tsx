@@ -3,13 +3,13 @@
 import { useState } from "react";
 
 // Før/etter: samme morgen med og uten Likviditetsradar
-export function PortefoljeModus({ medAi, utenAi }: { medAi: React.ReactNode; utenAi: React.ReactNode }) {
+export function PortefoljeModus({ radgiver, medAi, utenAi }: { radgiver: string; medAi: React.ReactNode; utenAi: React.ReactNode }) {
   const [modus, setModus] = useState<"med" | "uten">("med");
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">God morgen, Kari</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">God morgen, {radgiver}</h1>
           <p className="text-sm text-slate-600">
             {modus === "med" ? "Dette er det viktigste å gjøre i dag, og hvorfor." : "Slik så morgenen ut før: en kundeliste og en innboks."}
           </p>

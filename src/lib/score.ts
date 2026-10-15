@@ -2,13 +2,12 @@
 // kunne se nøyaktig hvorfor en kunde ligger høyt på listen.
 
 import type { Kunde } from "./types.ts";
-import { DAGENS_DATO, dagerMellom, kortDato } from "./dato.ts";
+import { DAGENS_DATO, dagerMellom, dagerSiden, kortDato } from "./dato.ts";
 import { lagPrognose, oppsummerPoster, type Prognose } from "./prognose.ts";
-import { BRANSJERISIKO } from "./sesong.ts";
 import { kr, mnok, omUker, prosent } from "./format.ts";
 import { KATEGORI_TEKST, regelbasertAnalyse, tekstpoeng, type Tekstanalyse } from "./tekst.ts";
 
-export type Kilde = "Prognose" | "Bankdata" | "Regnskapssystem" | "Tredjepart (simulert)" | "Bransje" | "CRM" | "Tekstanalyse";
+export type Kilde = "Prognose" | "Bankdata" | "Regnskapssystem" | "Åpne data" | "Bransje" | "CRM" | "Tekstanalyse";
 
 export interface Faktor {
   id: string;
@@ -53,7 +52,7 @@ export function vurderPortefolje(
       if (!d.internKunde) continue;
       const kilde = vurderinger.get(d.internKunde);
       if (!kilde) continue;
-      smitte.push({ fra: d.internKunde, til: k.id, andel: d.andelAvInnbetalinger, forsinkelse: d.snittDagerForsinkelse });
+      smitte.push({ fra: d.internKunde, til: k.id, andel: d.andelAvInnbetalinger, forsinkelse: d.snittDagerForsinkelse ?? 0 });
       if (kilde.score < 50) continue;
       const v = vurderinger.get(k.id)!;
       const poeng = Math.min(12, Math.round(d.andelAvInnbetalinger * 25));
@@ -84,7 +83,6 @@ export function vurder(kunde: Kunde, tekstanalyse: Tekstanalyse = regelbasertAna
   const prognose = lagPrognose(kunde);
   const ramme = kunde.kassekredittRamme;
   const saldoer = kunde.dagligSaldo.map((d) => d.saldo);
-  const siste30 = saldoer.slice(-30);
   const f: Faktor[] = [];
 
   // 1. Uker til tom kasse
@@ -105,17 +103,27 @@ export function vurder(kunde: Kunde, tekstanalyse: Tekstanalyse = regelbasertAna
     f.push({ id: "tomkasse", navn: "Tid til insolvensgrensen", poeng, maks: 30, forklaring, kilde: "Prognose" });
   }
 
-  // 2. Overtrekk og høy utnyttelse
+  // 2. Overtrekk og vedvarende høy utnyttelse av kassekreditten (faktisk trekk)
   {
-    const over = siste30.filter((s) => s < -ramme).length;
-    const hoy = siste30.filter((s) => s < -0.9 * ramme).length;
-    const poeng = over >= 3 ? 15 : over >= 1 ? 10 : hoy >= 15 ? 8 : hoy >= 5 ? 4 : 0;
+    const trekk = kunde.kassekredittTrekk;
+    const datoer = kunde.dagligSaldo.map((d) => d.dato);
+    const over = ramme > 0 ? trekk.slice(-90).filter((x) => x > ramme).length : 0;
+    // Månedssnitt av utnyttelsen siste 12 måneder
+    const perMnd = new Map<string, number[]>();
+    trekk.forEach((x, i) => perMnd.set(datoer[i].slice(0, 7), [...(perMnd.get(datoer[i].slice(0, 7)) ?? []), x]));
+    // Bare hele måneder (minst 20 dager med data), så det blir høyst 12
+    const heleMnd = [...perMnd.values()].filter((xs) => xs.length >= 20).slice(-12);
+    const mndOver80 = ramme > 0 ? heleMnd.filter((xs) => xs.reduce((a, x) => a + x, 0) / xs.length / ramme >= 0.8).length : 0;
+    const naa = ramme > 0 ? trekk[trekk.length - 1] / ramme : 0;
+    const poeng = over >= 2 ? 15 : over === 1 ? 10 : mndOver80 >= 9 ? 10 : mndOver80 >= 3 ? 6 : naa >= 0.9 ? 4 : 0;
     const forklaring =
       over > 0
-        ? `Kassekreditten var overtrukket ${over} av siste 30 dager, og over 90 % utnyttet ${hoy} dager.`
-        : hoy > 0
-          ? `Kassekreditten var over 90 % utnyttet ${hoy} av siste 30 dager.`
-          : "Ingen overtrekk eller høy utnyttelse siste 30 dager.";
+        ? `Kassekreditten var overtrukket ${over} dag${over > 1 ? "er" : ""} siste 90 dager. Utnyttelse i dag: ${prosent(naa)}.`
+        : mndOver80 > 0
+          ? `Kassekreditten var i snitt over 80 % utnyttet i ${mndOver80} av siste 12 måneder. I dag: ${prosent(naa)}.`
+          : ramme > 0
+            ? `Ingen overtrekk. Utnyttelse i dag: ${prosent(naa)}.`
+            : "Kunden har ikke kassekreditt.";
     f.push({ id: "overtrekk", navn: "Overtrekk / høy utnyttelse", poeng, maks: 15, forklaring, kilde: "Bankdata" });
   }
 
@@ -136,14 +144,17 @@ export function vurder(kunde: Kunde, tekstanalyse: Tekstanalyse = regelbasertAna
 
   // 4. Skatt og MVA
   if (kunde.restanser) {
-    const sum = kunde.restanser.mva + kunde.restanser.forskuddstrekkOgAga;
+    const sum = kunde.restanser.mva + kunde.restanser.forskuddstrekkOgAga + kunde.restanser.skatt;
     f.push({
       id: "restanser",
       navn: "Skatte- og MVA-restanser",
       poeng: sum > 0 ? 12 : 0,
       maks: 12,
-      forklaring: sum > 0 ? `Skylder det offentlige ${kr(sum)}${kunde.restanser.forskuddstrekkOgAga > 0 ? " (inkl. forskuddstrekk – alvorlig)" : ""}.` : "Ingen restanser.",
-      kilde: "Regnskapssystem",
+      forklaring:
+        sum > 0
+          ? `Skylder det offentlige ${kr(sum)}${kunde.restanser.skatt > 0 ? " i ubetalt restskatt" : ""}${kunde.restanser.forskuddstrekkOgAga > 0 ? " (inkl. forskuddstrekk – alvorlig)" : ""}.`
+          : "Ingen registrerte restanser.",
+      kilde: "Åpne data",
     });
   } else {
     f.push({ id: "restanser", navn: "Skatte- og MVA-restanser", poeng: 0, maks: 12, forklaring: "Ukjent – krever samtykke til regnskapsdata.", kilde: "Regnskapssystem", ukjent: true });
@@ -184,13 +195,13 @@ export function vurder(kunde: Kunde, tekstanalyse: Tekstanalyse = regelbasertAna
 
   // 7. Avviste betalinger
   {
-    const a = kunde.avvisteBetalinger30d;
+    const a = kunde.avvisteBetalinger90d;
     f.push({
       id: "avviste",
       navn: "Avviste betalinger",
       poeng: a >= 5 ? 8 : a >= 2 ? 5 : a === 1 ? 2 : 0,
       maks: 8,
-      forklaring: a ? `${a} betaling${a > 1 ? "er" : ""} avvist pga. manglende dekning siste 30 dager.` : "Ingen avviste betalinger.",
+      forklaring: a ? `${a} betaling${a > 1 ? "er" : ""} avvist pga. manglende dekning siste 90 dager.` : "Ingen avviste betalinger siste 90 dager.",
       kilde: "Bankdata",
     });
   }
@@ -248,8 +259,8 @@ export function vurder(kunde: Kunde, tekstanalyse: Tekstanalyse = regelbasertAna
       forklaring:
         t.betalingsanmerkninger + t.inkassosaker > 0
           ? `${t.betalingsanmerkninger} betalingsanmerkning(er), ${t.inkassosaker} åpne inkassosak(er).`
-          : "Ingen registrerte anmerkninger.",
-      kilde: "Tredjepart (simulert)",
+          : "Ingen registrerte betalingsanmerkninger.",
+      kilde: "Åpne data",
     });
   }
 
@@ -263,21 +274,41 @@ export function vurder(kunde: Kunde, tekstanalyse: Tekstanalyse = regelbasertAna
       maks: 15,
       forklaring: viktigste
         ? `${KATEGORI_TEKST[viktigste.kategori]}${viktigste.gjelderDebitor ? ` (${viktigste.gjelderDebitor})` : ""}: «${viktigste.sitat}»`
-        : "Ingen negative signaler i notater, e-post eller nyheter siste 120 dager.",
+        : "Ingen negative signaler i møtenotater, CRM eller registerhendelser siste 12 måneder.",
       kilde: "Tekstanalyse",
     });
   }
 
-  // 13. Bransje
-  {
-    const r = BRANSJERISIKO[kunde.bransje];
-    f.push({ id: "bransje", navn: "Bransjerisiko", poeng: r === "høy" ? 4 : r === "middels" ? 2 : 0, maks: 4, forklaring: `${kunde.bransje}: ${r} konkursrate (SSB).`, kilde: "Bransje" });
+  // 13. Motpart med betalingsanmerkning (stor andel av innbetalingene)
+  if (kunde.motpart) {
+    const m = kunde.motpart;
+    f.push({
+      id: "motpart",
+      navn: "Motpart med betalingsanmerkning",
+      poeng: m.andel >= 0.5 ? 10 : m.andel >= 0.3 ? 6 : 3,
+      maks: 10,
+      forklaring: `${prosent(m.andel)} av innbetalingene i 2026 kommer fra ${m.navn}, som fikk betalingsanmerkning ${kortDato(m.dato)}.`,
+      kilde: "Åpne data",
+    });
   }
 
-  // 14. Glemte kunder
+  // 14. Bransje (ekte konkursstatistikk fra SSB)
   {
-    const d = dagerMellom(kunde.sisteKontakt, DAGENS_DATO);
-    f.push({ id: "kontakt", navn: "Dager siden siste kontakt", poeng: d > 120 ? 4 : d > 60 ? 2 : 0, maks: 4, forklaring: `Sist kontaktet for ${d} dager siden.`, kilde: "CRM" });
+    const r = kunde.bransjerisiko;
+    f.push({ id: "bransje", navn: "Bransjerisiko", poeng: r.niva === "høy" ? 4 : r.niva === "middels" ? 2 : 0, maks: 4, forklaring: r.forklaring, kilde: "Bransje" });
+  }
+
+  // 15. Glemte kunder
+  {
+    const d = dagerSiden(kunde.sisteKontakt);
+    f.push({
+      id: "kontakt",
+      navn: "Dager siden siste kontakt",
+      poeng: d === null || d > 365 ? 4 : d > 180 ? 2 : 0,
+      maks: 4,
+      forklaring: d === null ? "Ingen registrert kontakt." : `Sist kontaktet for ${d} dager siden${kunde.sisteKontaktType ? ` (${kunde.sisteKontaktType.toLowerCase()})` : ""}.`,
+      kilde: "CRM",
+    });
   }
 
   const score = Math.min(100, f.reduce((s, x) => s + x.poeng, 0));
@@ -288,7 +319,7 @@ export function vurder(kunde: Kunde, tekstanalyse: Tekstanalyse = regelbasertAna
     faktorer: f,
     prognose,
     saldoEndringUke,
-    kkUtnyttelse: ramme > 0 ? Math.max(0, -saldoer[saldoer.length - 1]) / ramme : 0,
+    kkUtnyttelse: ramme > 0 ? kunde.kassekredittTrekk[kunde.kassekredittTrekk.length - 1] / ramme : 0,
     tekstanalyse,
   };
 }

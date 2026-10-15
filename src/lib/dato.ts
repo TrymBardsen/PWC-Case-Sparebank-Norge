@@ -1,6 +1,12 @@
 // Datohjelpere. Alle datoer er ISO-strenger (YYYY-MM-DD) og regnes i UTC.
 
-export const DAGENS_DATO = "2026-10-15";
+// Datagrunnlaget gjelder per denne datoen (kundedata.json: «Per dato»)
+export const DAGENS_DATO = "2026-10-01";
+
+// Dager siden en dato, eller null hvis datoen mangler (f.eks. ingen registrert kontakt)
+export function dagerSiden(iso: string | null): number | null {
+  return iso ? dagerMellom(iso, DAGENS_DATO) : null;
+}
 
 export function tilDato(iso: string): Date {
   return new Date(iso + "T00:00:00Z");

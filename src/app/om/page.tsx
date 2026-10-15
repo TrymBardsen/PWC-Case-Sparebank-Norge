@@ -13,7 +13,7 @@ export default function Om() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Steg nr={1} tittel="Oppdag" tekst="Dagens agenda og forklarbar score. AI leser notater, e-post og nyheter og finner signaler før tallene viser dem." />
         <Steg nr={2} tittel="Forstå" tekst="13-ukers prognose dag for dag, med kjente forfall (lønn, MVA, skatt, avdrag) og kundens egne fakturaer." />
-        <Steg nr={3} tittel="Handle" tekst="Tiltak med effekt i kroner, grønne investeringer som styrker likviditeten, meldingsutkast og samtaleunderlag. Rådgiveren beslutter." />
+        <Steg nr={3} tittel="Handle" tekst="Tiltak med effekt i kroner, meldingsutkast og samtaleunderlag. Rådgiveren beslutter." />
       </div>
 
       <Kort tittel="Hvordan prognosen virker">
@@ -49,9 +49,10 @@ export default function Om() {
             <Rad a="Enhetsregisteret, Regnskapsregisteret" b="Ekte, åpent API" c="Kundebilde, status, regnskap, roller" />
             <Rad a="Norges Bank (styringsrente)" b="Ekte, åpent API" c="Rentescenario, toppstripe" />
             <Rad a="Strømpris NO5 (hvakosterstrommen.no)" b="Ekte, åpent API" c="Strømscenario for energiintensive kunder" />
-            <Rad a="Konto, kassekreditt, lån, avviste betalinger" b="Syntetisk (bankens egne data)" c="Prognose og score" />
-            <Rad a="Reskontro, leverandørgjeld, restanser" b="Syntetisk (krever samtykke)" c="Prognose og score" />
-            <Rad a="Betalingsanmerkninger, inkasso" b="Simulert tredjepart" c="Score" />
+            <Rad a="Bedrifter, engasjement, kontakter og hendelser" b="Fiktiv kundebase (kundedata.json)" c="Kundebilde, score, tekstsignaler" />
+            <Rad a="Saldo, transaksjoner, lån, sikkerheter, avviste betalinger" b="Syntetiske bankdata (tilleggsdata.json)" c="Prognose og score" />
+            <Rad a="Reskontro og leverandørgjeld" b="Syntetisk, krever samtykke (tilleggsdata.json)" c="Prognose og score" />
+            <Rad a="Konkurser per næring (Vestland og hele landet)" b="Ekte, SSB (tabell 10790 og 07091)" c="Bransjerisiko" />
           </tbody>
         </table>
       </Kort>
@@ -67,10 +68,11 @@ export default function Om() {
         </Kort>
         <Kort tittel="Fallgruver vi har designet for">
           <ul className="list-disc space-y-1.5 pl-5 text-sm text-slate-700">
-            <li>Falske alarmer: sesongbedrifter (f.eks. hagesenteret) vurderes mot egen sesongprofil.</li>
+            <li>Falske alarmer: prognosen bruker samme uker i fjor, så sesongbedrifter vurderes mot sitt eget mønster.</li>
+            <li>Sensitive situasjoner: kunder der banken har lovet bare praktisk kontakt, tas ut av agendaen og får ingen salgsforslag.</li>
             <li>Selvoppfyllende profeti: tiltakene handler om å hjelpe, ikke å kutte rammen.</li>
             <li>Glemte kunder: lang tid siden kontakt løfter kunden på listen.</li>
-            <li>Smitte: underleverandører til en kunde i krise flagges automatisk.</li>
+            <li>Motpartsrisiko: kunder der en stor andel av innbetalingene kommer fra en motpart med betalingsanmerkning, flagges automatisk.</li>
           </ul>
         </Kort>
       </div>

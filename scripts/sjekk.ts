@@ -1,11 +1,9 @@
 // Skriver ut score og prognose for alle kunder, for å kalibrere demodataene.
 // Kjør: node scripts/sjekk.ts
 
-import { readFileSync } from "node:fs";
-import type { Portefolje } from "../src/lib/types.ts";
+import { portefolje as data } from "./last-portefolje.ts";
 import { vurder, vurderPortefolje } from "../src/lib/score.ts";
 
-const data: Portefolje = JSON.parse(readFileSync(new URL("../data/portefolje.json", import.meta.url), "utf8"));
 const { vurderinger } = vurderPortefolje(data.kunder);
 const rader = data.kunder.map((k) => ({ k, v: vurderinger.get(k.id)! })).sort((a, b) => b.v.score - a.v.score);
 for (const { k, v } of rader) {
@@ -18,7 +16,7 @@ for (const { k, v } of rader) {
 
 const id = process.argv[2];
 if (id) {
-  const k = data.kunder.find((x) => x.id === id)!;
+  const k = data.kunder.find((x) => x.id === id || x.navn.startsWith(id))!;
   const p = vurder(k).prognose;
   for (const u of p.uker) {
     console.log(`uke ${u.nr} ${u.fra} inn ${Math.round(u.inn / 1000)}k ut ${Math.round(u.ut / 1000)}k slutt ${Math.round(u.sluttSaldo / 1000)}k min ${Math.round(u.minSaldo / 1000)}k p ${Math.round(u.sannsynlighet * 100)}%`);

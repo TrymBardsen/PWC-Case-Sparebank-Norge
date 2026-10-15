@@ -1,11 +1,14 @@
 import "server-only";
-import raw from "../../data/portefolje.json";
-import type { Kunde, Portefolje } from "./types";
+import kundedata from "../../data/kundedata.json";
+import tilleggsdata from "../../data/tilleggsdata.json";
+import type { Kunde } from "./types";
+import { byggPortefolje, type Kundedata, type Tilleggsdata } from "./kundedata";
 import { vurderPortefolje } from "./score";
 import { regelbasertAnalyse } from "./tekst";
 import { lesLagrede } from "./tekstAi";
 
-export const portefolje = raw as unknown as Portefolje;
+// Eneste datagrunnlag: data/kundedata.json + data/tilleggsdata.json
+export const portefolje = byggPortefolje(kundedata as unknown as Kundedata, tilleggsdata as unknown as Tilleggsdata);
 
 let cache: { endret: number; resultat: ReturnType<typeof vurderPortefolje> } | null = null;
 

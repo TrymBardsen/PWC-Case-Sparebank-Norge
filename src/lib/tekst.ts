@@ -1,4 +1,4 @@
-// Signaler fra ustrukturert tekst: rådgivernotater, e-post fra kunden, nyheter og
+// Signaler fra tekst: møtenotater, CRM, bankhendelser og registerhendelser og
 // kunngjøringer. Hvert signal har et ordrett sitat som må finnes i kilden. Sitater
 // som ikke kan verifiseres, forkastes, så et signal aldri bygger på noe som ikke står der.
 
@@ -75,15 +75,19 @@ export function finnDebitor(kunde: Kunde, tekst: string): string | null {
 
 // Regelbasert reserve: ordliste per kategori, setning for setning
 const ORDLISTE: { kategori: Kategori; alvor: 1 | 2 | 3; monster: RegExp }[] = [
-  { kategori: "kundetap", alvor: 3, monster: /ikke forlenges|ikke fornyes|anbudskonkurranse|lyser ut|bytte leverandør|tapt kontrakt|sier opp avtalen/i },
-  { kategori: "betalingsproblemer", alvor: 3, monster: /inkasso|ubetalt|etter med betaling|ligger .* etter|stoppet videre arbeid/i },
-  { kategori: "betalingsproblemer", alvor: 2, monster: /utsatt avdrag|utsette|betalingsfrist|drar ut|forskuttere|før lønn/i },
+  { kategori: "kundetap", alvor: 3, monster: /ikke forlenges|ikkje forlenga|ikke fornyes|anbudskonkurranse|lyser ut|bytte leverandør|tapt kontrakt|sier opp avtalen|motparten fekk betalingsanmerkning/i },
+  { kategori: "kundetap", alvor: 2, monster: /får trøbbel|alt går gjennom|nesten alt/i },
+  { kategori: "betalingsproblemer", alvor: 3, monster: /inkasso|ubetalt|etter med betaling|ligger .* etter|stoppet videre arbeid|overtrekk|purring sendt/i },
+  { kategori: "betalingsproblemer", alvor: 2, monster: /utsatt avdrag|utsette|betalingsfrist|drar ut|forskuttere|før lønn|utnytta over 80/i },
   { kategori: "nedbemanning", alvor: 2, monster: /permitter|nedbemann|sagt opp|si opp|stoppet nyansettelser/i },
   { kategori: "etterspørsel", alvor: 2, monster: /på vent|avventer|svakt .*salg|færre|nedgang|lavpris|importkontroll|ventetid/i },
   { kategori: "klimakrav", alvor: 1, monster: /klimaregnskap|csrd|nullutslipp|utslippskutt|miljøkrav/i },
-  { kategori: "grønn interesse", alvor: 1, monster: /varmepumpe|solceller|grønne? lån|enova|varmegjenvinning|elbil/i },
-  { kategori: "positiv", alvor: 1, monster: /vinner|fornyet|ny rammeavtale|rekord|økt omsetning/i },
+  { kategori: "grønn interesse", alvor: 1, monster: /varmepumpe|solceller|grønne? lån|enova|varmegjenvinning|elbil|solenergi/i },
+  { kategori: "positiv", alvor: 1, monster: /vinner|fornyet|ny rammeavtale|rekord|økt omsetning|tildelt offentleg kontrakt|tal tilsette auka|rammeløyve godkjent/i },
 ];
+
+// Hendelser som allerede er egne faktorer i scoren (overtrekk, restskatt, motpart) teller ikke dobbelt
+const STRUKTURERTE_KATEGORIER = ["Kreditt", "Betalingsanmerkning", "Motpart", "Likviditet", "Transaksjon"];
 
 const OPPSUMMERING: Record<Kategori, string> = {
   kundetap: "Kunden kan miste en viktig avtale eller kunde.",
@@ -126,13 +130,13 @@ export function regelbasertAnalyse(kunde: Kunde): Tekstanalyse {
   return { metode: "regelbasert", tidspunkt: new Date().toISOString(), signaler, forkastet: 0 };
 }
 
-// Poeng i scoren: sterkeste signal per kategori siste 120 dager,
+// Poeng i scoren: sterkeste signal per kategori siste 12 måneder,
 // forsterket når signalet gjelder en kunde som står for mye av innbetalingene.
 export function tekstpoeng(kunde: Kunde, analyse: Tekstanalyse): { poeng: number; viktigste: Tekstsignal | null } {
   const kilder = alleTekster(kunde);
   const ferske = analyse.signaler.filter((s) => {
     const k = kilder.find((x) => x.id === s.kildeId);
-    return k && dagerMellom(k.dato, DAGENS_DATO) <= 120 && KATEGORI_POENG[s.kategori] > 0;
+    return k && dagerMellom(k.dato, DAGENS_DATO) <= 365 && KATEGORI_POENG[s.kategori] > 0 && !STRUKTURERTE_KATEGORIER.includes(k.tittel ?? "");
   });
   const vekt = (s: Tekstsignal) => {
     const debitor = kunde.debitorer.find((d) => d.navn === s.gjelderDebitor);

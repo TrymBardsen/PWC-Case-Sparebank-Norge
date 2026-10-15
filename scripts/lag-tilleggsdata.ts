@@ -129,6 +129,7 @@ const MVA: Record<Gruppe, number> = {
 const LONN: Record<Gruppe, number> = { bygg: 620, handel: 470, daglegvare: 430, servering: 400, reiseliv: 420, sjomat: 650, industri: 600, tenester: 700, helse: 640, barnehage: 520, transport: 560 };
 const HUSLEIGE: Record<Gruppe, number> = { bygg: 0.02, handel: 0.06, daglegvare: 0.04, servering: 0.07, reiseliv: 0.06, sjomat: 0.015, industri: 0.03, tenester: 0.05, helse: 0.07, barnehage: 0.08, transport: 0.02 };
 const STRAUM: Record<Gruppe, number> = { bygg: 0.007, handel: 0.015, daglegvare: 0.025, servering: 0.03, reiseliv: 0.035, sjomat: 0.03, industri: 0.03, tenester: 0.005, helse: 0.012, barnehage: 0.015, transport: 0.006 };
+const SESONG_LONN: Record<Gruppe, number> = { bygg: 0.1, handel: 0.1, daglegvare: 0, servering: 0.3, reiseliv: 0.85, sjomat: 0.4, industri: 0, tenester: 0, helse: 0, barnehage: 0, transport: 0 };
 const STRAUM_SESONG = [1.5, 1.45, 1.25, 1.0, 0.8, 0.65, 0.6, 0.65, 0.8, 1.05, 1.3, 1.45];
 const B2C: Gruppe[] = ["handel", "daglegvare", "servering", "reiseliv", "helse"];
 const MVA_FORFALL: [number, number][] = [[1, 10], [3, 10], [5, 10], [7, 31], [9, 10], [11, 10]]; // [månad (0-indeksert), dag]
@@ -277,13 +278,17 @@ function simuler(b: Bedrift) {
   const innPerMnd = new Map<string, number>();
 
   // 1. Innbetalingar på kvardagar
-  const sesongSnitt = SESONG[g].reduce((s, x) => s + x, 0) / 12;
+  // Kundar med vedvarande høg utnytting (bandmerknad) har jamn drift: store sesongsvingingar
+  // ville sprengt kassekreditten. Sesongen dempast difor til 30 % for dei.
+  const sesongStyrke = m.kkBand ? 0.3 : 1;
+  const sesongProfil = SESONG[g].map((x) => 1 + (x - 1) * sesongStyrke);
+  const sesongSnitt = sesongProfil.reduce((s, x) => s + x, 0) / 12;
   for (let i = 0; i < DAGAR.length; i++) {
     const d = dato(DAGAR[i]);
     const helg = vekedag(DAGAR[i]) >= 5;
     if (helg && !b2c) continue;
     const dagarIVeka = b2c ? 7 : 5;
-    const nivaa = ((oms[d.getUTCFullYear()] * (1 + mva)) / 52 / dagarIVeka) * (SESONG[g][d.getUTCMonth()] / sesongSnitt);
+    const nivaa = ((oms[d.getUTCFullYear()] * (1 + mva)) / 52 / dagarIVeka) * (sesongProfil[d.getUTCMonth()] / sesongSnitt);
     const stoy = Math.max(0.05, 1 + (r() - 0.5) * (b2c ? 0.6 : 1.4));
     const sum = nivaa * stoy;
     flyt.kort[i] += sum * kortandel;
@@ -307,7 +312,9 @@ function simuler(b: Bedrift) {
     const aar = d.getUTCFullYear();
     const mnd = d.getUTCMonth();
     const dag = d.getUTCDate();
-    const brutto = (tilsette[aar] * LONN[g] * lonnFaktor) / 12;
+    // Sesongbedrifter har fleire tilsette i høgsesongen
+    const sesongLonn = 1 - SESONG_LONN[g] + (SESONG_LONN[g] * sesongProfil[mnd]) / sesongSnitt;
+    const brutto = ((tilsette[aar] * LONN[g] * lonnFaktor) / 12) * sesongLonn;
     if (dag === 20) {
       flyt.lonn[i] += brutto * (mnd === 11 ? 0.85 : 0.7) + (mnd === 5 ? brutto * 12 * 0.102 * 0.7 : 0);
       for (const l of lan) {
@@ -343,7 +350,12 @@ function simuler(b: Bedrift) {
   const innSum = INN.reduce((s, k) => s + flyt[k].reduce((a, x) => a + x, 0), 0);
   const levTotal = Math.max(innSum * 0.1, innSum - kjendeSum - (b.driftsresultat_2025_knok * DAGAR.length) / 365 * 0.6);
   const kvardagar = DAGAR.filter((d) => vekedag(d) < 5).length;
-  for (let i = 0; i < DAGAR.length; i++) if (vekedag(DAGAR[i]) < 5) flyt.leverandorar[i] += (levTotal / kvardagar) * (0.4 + r() * 1.2);
+  // Innkjøp følgjer aktiviteten (sesongen)
+  for (let i = 0; i < DAGAR.length; i++) {
+    if (vekedag(DAGAR[i]) >= 5) continue;
+    const sesong = sesongProfil[dato(DAGAR[i]).getUTCMonth()] / sesongSnitt;
+    flyt.leverandorar[i] += (levTotal / kvardagar) * sesong * (0.4 + r() * 1.2);
+  }
 
   // 4. Saldo (P = driftskonto − trekk på kassakreditt). Svingingane kjem frå dei faktiske betalingane
   //    (lønningsdagar, MVA, innbetalingar); nivået følgjer ein jamn bane som endar i dagens saldo.
@@ -354,11 +366,14 @@ function simuler(b: Bedrift) {
   const netto = DAGAR.map((_, i) => INN.reduce((s, k) => s + flyt[k][i], 0) - UT.reduce((s, k) => s + flyt[k][i], 0));
   const raa: number[] = [];
   netto.reduce((s, x, i) => (raa[i] = s + x), 0);
-  // Avvik frå 31-dagars glidande snitt = kortsiktige svingingar i kontantstraumen
+  // Avvik frå 365-dagars glidande snitt: behaldar lønningsdagar og sesong, fjernar langsiktig drift
+  const VINDU = 182;
+  const kumul = [0];
+  for (const x of raa) kumul.push(kumul[kumul.length - 1] + x);
   const avvik = raa.map((x, i) => {
-    const fra = Math.max(0, i - 15);
-    const til = Math.min(raa.length, i + 16);
-    return x - raa.slice(fra, til).reduce((s, y) => s + y, 0) / (til - fra);
+    const fra = Math.max(0, i - VINDU);
+    const til = Math.min(raa.length, i + VINDU + 1);
+    return x - (kumul[til] - kumul[fra]) / (til - fra);
   });
   const sortert = [...avvik].map(Math.abs).sort((x, y) => x - y);
   const amplitude = sortert[Math.floor(sortert.length * 0.95)] || 1;
@@ -375,7 +390,9 @@ function simuler(b: Bedrift) {
 
   // Nivåbane L(t): lineær frå startnivå til dagens saldo, med tilpassingar for mønstera i kundedata
   const startNivaa = pIdag + (r() - 0.5) * (b.omsetning_2025_knok / 12) * 0.6;
-  const L = DAGAR.map((_, i) => startNivaa + ((pIdag - startNivaa) * i) / IDAG);
+  // Stabilt nivå det siste halvåret (ingen skjult trend som prognosen ville tolke som et nytt signal)
+  const flatFra = IDAG - 180;
+  const L = DAGAR.map((_, i) => (i >= flatFra ? pIdag : startNivaa + ((pIdag - startNivaa) * i) / flatFra));
   const overgang = (fra: number, maal: (i: number) => number) => {
     // Glir over til eit nytt nivå i løpet av 45 dagar før vindauget startar
     for (let i = Math.max(0, fra - 45); i <= IDAG; i++) {
@@ -386,6 +403,8 @@ function simuler(b: Bedrift) {
   if (kk && m.kkBand) {
     const fra = DAGAR.indexOf(m.kkBand.fra);
     const midt = (m.kkBand.min + m.kkBand.maks) / 200;
+    // Før bandet: utnytting rett under 80 % heile vegen, så overgangen inn i bandet er liten (ingen eingongsfall)
+    for (let i = 0; i < fra; i++) L[i] = buffer - 0.74 * ramme;
     overgang(fra, (i) => buffer - (midt + ((kkTrekk / ramme - midt) * Math.max(0, i - (IDAG - 30))) / 30) * ramme);
   }
   if (m.driftskontoMin) {
@@ -427,8 +446,15 @@ function simuler(b: Bedrift) {
       const buffer = buf;
       const u = Math.max(0, buffer - p) / ramme;
       if (m.kkBand && DAGAR[i] >= m.kkBand.fra) {
-        // Dagleg kan utnyttinga svinge (lønningsdagar), men aldri overtrekk. Månadssnittet styrast under.
-        p = buffer - Math.min(0.995, Math.max(0.55, u)) * ramme;
+        // Trekket ligg jamt i bandet; svingingane (lønn, MVA) tek driftskontoen
+        const midt = Math.min(m.kkBand.maks / 100 - 0.03, m.kkBand.min / 100 + 0.05);
+        const k = Math.min(0.99, midt + 0.025 * Math.sin(i / 7.3) + 0.01 * (r() - 0.5)) * ramme;
+        const d = Math.max(0, p + k);
+        const kFaktisk = Math.min(0.995 * ramme, d - p);
+        P[i] = d - kFaktisk;
+        D[i] = d;
+        K[i] = kFaktisk;
+        continue;
       } else if (m.overtrekkDagar?.includes(DAGAR[i])) {
         p = buffer - ramme * (1.03 + r() * 0.05);
       } else {
@@ -449,7 +475,7 @@ function simuler(b: Bedrift) {
     const fra = DAGAR.indexOf(m.kkBand.fra);
     const lo = m.kkBand.min / 100 + 0.01;
     const hi = m.kkBand.maks / 100 - 0.01;
-    for (let runde = 0; runde < 4; runde++) {
+    for (let runde = 0; runde < 1; runde++) {
       let i = fra;
       while (i <= IDAG) {
         const d = dato(DAGAR[i]);
@@ -458,6 +484,10 @@ function simuler(b: Bedrift) {
         const idx = Array.from({ length: slutt - i + 1 }, (_, j) => i + j);
         const snitt = idx.reduce((s2, j) => s2 + K[j], 0) / idx.length / ramme;
         const maal = Math.min(hi, Math.max(lo, snitt));
+        if (maal === snitt) {
+          i = slutt + 1;
+          continue;
+        }
         for (const j of idx) {
           const buf = bufferAt(j);
           const u = Math.min(0.995, Math.max(0.5, K[j] / ramme + (maal - snitt)));
@@ -473,14 +503,23 @@ function simuler(b: Bedrift) {
   D[IDAG] = dIdag;
   K[IDAG] = kkTrekk;
 
-  // 6. Avstem: endring i saldo = inn − ut. Leverandørbetalingane tek differansen; blir dei negative,
-  //    er det pengar inn utover kundebetalingane (overføring frå anna konto, innskot).
-  for (let i = 1; i < P.length; i++) {
-    const kjentNetto = INN.reduce((s, k) => s + flyt[k][i], 0) - UT.filter((k) => k !== "leverandorar" && k !== "anna_ut").reduce((s, k) => s + flyt[k][i], 0);
-    const lev = kjentNetto - (P[i] - P[i - 1]);
-    flyt.leverandorar[i] = Math.max(0, lev);
-    flyt.anna_ut[i] = 0;
-    if (lev < 0) flyt.anna_inn[i] += -lev;
+  // 6. Avstem per veke: endring i saldo = inn − ut. Leverandørbetalingane tek differansen og
+  //    fordelast på kvardagane. Berre om veka samla krev meir pengar inn enn kundane betalte,
+  //    vert resten «anna inn» (overføring frå anna konto eller innskot).
+  for (let w = 0; w * 7 < P.length; w++) {
+    const fra = w * 7;
+    const til = Math.min(P.length, fra + 7);
+    let kjent = 0;
+    for (let i = fra; i < til; i++) {
+      kjent += INN.reduce((s2, k) => s2 + flyt[k][i], 0) - UT.filter((k) => k !== "leverandorar" && k !== "anna_ut").reduce((s2, k) => s2 + flyt[k][i], 0);
+      flyt.anna_ut[i] = 0;
+    }
+    const forrige = fra === 0 ? P[0] - (P[1] - P[0]) : P[fra - 1];
+    const lev = kjent - (P[til - 1] - forrige);
+    const vekt: number[] = Array.from({ length: til - fra }, (_, j2) => (vekedag(DAGAR[fra + j2]) < 5 ? 1 : 0));
+    const sumVekt = vekt.reduce((a, x) => a + x, 0) || 1;
+    for (let j2 = 0; j2 < til - fra; j2++) flyt.leverandorar[fra + j2] = (Math.max(0, lev) * vekt[j2]) / sumVekt;
+    if (lev < 0) flyt.anna_inn[fra] += -lev;
   }
 
   // 7. Betalarar (kven innbetalingane kjem frå)

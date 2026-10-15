@@ -7,7 +7,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "data": "node scripts/generer-data.ts",
     "sjekk": "node scripts/sjekk.ts",
     "tekstsignaler": "node --env-file-if-exists=.env.local scripts/tekstsignaler.ts",
     "ssb": "node scripts/hent-ssb.ts",

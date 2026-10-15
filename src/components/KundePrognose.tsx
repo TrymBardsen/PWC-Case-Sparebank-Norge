@@ -31,7 +31,7 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
   const standard = useMemo(() => lagPrognose(kunde), [kunde]);
 
   // Kort- og kontantsalg kan ikke «betale senere», så scenarioet gir bare mening for fakturakunder
-  const storsteErFakturakunde = !kunde.debitorer.some((d) => d.navn === standard.storsteDebitor && d.snittDagerForsinkelse <= 2 && d.andelAvInnbetalinger >= 0.6);
+  const storsteErFakturakunde = !kunde.debitorer.some((d) => d.navn === standard.storsteDebitor && (d.type === "Kortoppgjer" || d.type === "Privat" || (d.snittDagerForsinkelse ?? 99) <= 2) && d.andelAvInnbetalinger >= 0.6);
   const sv = (id: string, standardverdi: number, min: number, maks: number) => {
     const v = scenarioVerdier[id];
     return v === undefined || !Number.isFinite(v) ? standardverdi : Math.min(maks, Math.max(min, v));
@@ -65,7 +65,7 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
     {
       id: "stromFaktor",
       tittel: `Strømprisen ${vStrom >= 0 ? "øker" : "faller"} ${Math.abs(vStrom)} %`,
-      beskrivelse: `Fra ${strompris.toFixed(2).replace(".", ",")} kr/kWh i dag (NO5), ${Math.round(kunde.faste.stromKwhPerMnd / 1000)} MWh/mnd`,
+      beskrivelse: `Strøm koster kunden ca. ${kr(kunde.faste.stromPerMnd)} i måneden (spotpris NO5 i dag ${strompris.toFixed(2).replace(".", ",")} kr/kWh)`,
       parameter: { etikett: "Endring", enhet: "%", standard: 50, min: -50, maks: 300, steg: 10, verdi: vStrom },
       tilValg: (v) => 1 + v / 100,
     },
@@ -78,7 +78,8 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
   const scenario = useMemo(() => JSON.parse(scenarioNokkel) as PrognoseValg, [scenarioNokkel]);
   const parameterNokkel = JSON.stringify(parametre);
 
-  const alleTiltak = useMemo(() => tiltakFor(kunde, JSON.parse(parameterNokkel)), [kunde, parameterNokkel]);
+  // Tiltak uten data (f.eks. energitiltak som ikke er kartlagt) vises ikke
+  const alleTiltak = useMemo(() => tiltakFor(kunde, JSON.parse(parameterNokkel)).filter((t) => t.id !== "energitiltak" || !t.utilgjengelig), [kunde, parameterNokkel]);
   const vurdering = useMemo(() => vurderTiltak(kunde, scenario, JSON.parse(parameterNokkel)), [kunde, scenario, parameterNokkel]);
   const aktiveTiltak = alleTiltak.filter((t) => valgte.includes(t.id));
   const valg = aktiveTiltak.reduce<PrognoseValg>((v, t) => ({ ...v, ...t.valg }), scenario);
@@ -415,22 +416,23 @@ function ParamFelt({ parameter, onEndre }: { parameter: Parameter; onEndre: (ver
 
 function Metodeboks({ kunde, prognose }: { kunde: Kunde; prognose: ReturnType<typeof lagPrognose> }) {
   const m = prognose.metode;
+  const pst = (x: number) => `${x >= 1 ? "+" : "−"}${Math.abs(Math.round((x - 1) * 100))} %`;
   return (
     <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
       <ol className="list-decimal space-y-1 pl-4">
         <li>
-          <b>Sesong:</b>{" "}
-          {m.sesong === "egen og bransje" ? `kundens egen profil fra i fjor, blandet 50/50 med bransjeprofilen for ${kunde.bransje.toLowerCase()}` : "bransjeprofil"}.
+          <b>Datagrunnlag:</b> {kunde.historikk.length} uker med transaksjoner og {kunde.dagligSaldo.length} dager med saldo fra bankens egne systemer
+          {kunde.samtykke >= 2 ? `, pluss reskontro fra ${kunde.regnskapssystem ?? "regnskapssystemet"} (samtykke)` : ""}.
         </li>
         <li>
-          <b>Nivå:</b> vektet snitt av siste 12 uker (halveringstid 3 uker): inn {kr(m.nivaInnPerUke)} og variable kostnader {kr(m.nivaUtPerUke)} per uke,
-          sesongjustert.
+          <b>Normal drift:</b>{" "}
+          {m.sesongnaiv
+            ? `innbetalinger og variable kostnader fra samme uker i fjor, justert for utviklingen siste 12 uker mot samme uker året før (innbetalinger ${pst(m.vekstInn)}, variable kostnader ${pst(m.vekstUt)}). Sesongen følger dermed med uten antakelser.`
+            : `vektet snitt av siste 12 uker (inn ${kr(m.nivaInnPerUke)} og variable kostnader ${kr(m.nivaUtPerUke)} per uke), sesongjustert, med dempet trend.`}
         </li>
         <li>
-          <b>Trend:</b> innbetalingene endrer seg {(m.trendPerUke * 100).toFixed(1).replace(".", ",")} % per uke. Trenden videreføres, men dempes med 20 % per uke.
-        </li>
-        <li>
-          <b>Kjente forfall</b> på eksakt dato: lønn, forskuddstrekk og AGA, MVA (beregnet av faktisk omsetning i terminen), husleie, strøm, renter og avdrag.
+          <b>Kjente forfall</b> på eksakt dato: lønn, forskuddstrekk og AGA og strøm med beløp fra samme måned i fjor (fanger opp feriepenger, halv skatt og
+          sesongbemanning), MVA beregnet av faktisk omsetning i terminen, husleie, renter, avdrag og sluttbetalinger på lån.
         </li>
         <li>
           <b>Reskontro:</b>{" "}

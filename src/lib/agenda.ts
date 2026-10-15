@@ -4,7 +4,7 @@
 import type { Kunde } from "./types.ts";
 import type { Smitte, Vurdering } from "./score.ts";
 import type { GronnVurdering } from "./gronn.ts";
-import { DAGENS_DATO, dagerMellom, kortDato } from "./dato.ts";
+import { dagerSiden, kortDato } from "./dato.ts";
 import { kr, mnok, omUker, prosent } from "./format.ts";
 import { KATEGORI_POENG, KATEGORI_TEKST } from "./tekst.ts";
 import { vurderTiltak } from "./tiltak.ts";
@@ -37,14 +37,16 @@ export function lagAgenda(
   const oppgaver: Oppgave[] = [];
   const brukt = new Set<string>();
   const sortert = [...kunder].sort((a, b) => vurderinger.get(b.id)!.score - vurderinger.get(a.id)!.score);
-  const signatur = "\n\nVennlig hilsen\nKari Nilsen\nBedriftsrådgiver";
+  const signatur = `\n\nVennlig hilsen\n${kunder[0]?.radgiver ?? "Rådgiver"}\nBedriftsrådgiver, BM Bergen`;
+  // Kunder i en sensitiv situasjon (f.eks. etter dødsfall) får ingen oppgaver her: banken har lovet bare praktisk kontakt
+  const sensitive = new Set(kunder.filter((k) => k.sensitiv).map((k) => k.id));
 
   // 1. Kritiske og høye kunder
   for (const k of sortert) {
     const v = vurderinger.get(k.id)!;
-    if (v.niva !== "Kritisk" && v.niva !== "Høy") continue;
+    if ((v.niva !== "Kritisk" && v.niva !== "Høy") || sensitive.has(k.id)) continue;
     const p = v.prognose;
-    const dager = dagerMellom(k.sisteKontakt, DAGENS_DATO);
+    const dager = dagerSiden(k.sisteKontakt) ?? Infinity;
     const pakke = vurderTiltak(k).pakke;
     const grense = p.tomKasseDato ? `Passerer insolvensgrensen ${kortDato(p.tomKasseDato)} (${omUker(p.ukerTilTomKasse!)}, ${prosent(p.sannsynlighetInsolvens)})` : `${prosent(p.sannsynlighetInsolvens)} sannsynlighet for å passere insolvensgrensen`;
     const tekst = v.faktorer.find((f) => f.id === "tekst" && f.poeng > 0);
@@ -56,7 +58,7 @@ export function lagAgenda(
         kontakt: k.dagligLeder,
         type: "ring",
         tittel: `Ring ${fornavn(k.dagligLeder)} i ${k.navn}`,
-        grunn: `${grense}. Ikke kontaktet på ${dager} dager.${tekst ? ` ${tekst.forklaring}` : ""}`,
+        grunn: `${grense}. ${Number.isFinite(dager) ? `Ikke kontaktet på ${dager} dager.` : "Ingen registrert kontakt."}${tekst ? ` ${tekst.forklaring}` : ""}`,
         forslag: pakke ? `${pakke.prognose.margin >= 0 ? "Foreslå" : "Drøft"}: ${pakke.tiltak.map((t) => t.navn.toLowerCase()).join(" + ")}` : undefined,
         frist: "I dag",
         minutterUten: 75,
@@ -88,7 +90,7 @@ export function lagAgenda(
 
   // 2. Kunder der teksten viser noe tallene ikke viser ennå
   for (const k of sortert) {
-    if (brukt.has(k.id)) continue;
+    if (brukt.has(k.id) || sensitive.has(k.id)) continue;
     const v = vurderinger.get(k.id)!;
     const tekst = v.faktorer.find((f) => f.id === "tekst");
     const sterkest = [...v.tekstanalyse.signaler].sort((a, b) => KATEGORI_POENG[b.kategori] * b.alvor - KATEGORI_POENG[a.kategori] * a.alvor)[0];
@@ -119,7 +121,7 @@ export function lagAgenda(
 
   // 3. Smitte: underleverandører til kunder i krise
   for (const s of smitte) {
-    if (brukt.has(s.til) || (vurderinger.get(s.fra)?.score ?? 0) < 50) continue;
+    if (brukt.has(s.til) || sensitive.has(s.til) || (vurderinger.get(s.fra)?.score ?? 0) < 50) continue;
     const til = kunder.find((k) => k.id === s.til)!;
     const fra = kunder.find((k) => k.id === s.fra)!;
     oppgaver.push({
@@ -140,7 +142,7 @@ export function lagAgenda(
   }
 
   // 4. Grønn mulighet: nødvendig og gjennomførbar, raskest tilbakebetalt
-  const beste = [...gronn.entries()].filter(([id, g]) => g.gjennomforbar && !brukt.has(id)).sort((a, b) => b[1].nodvendig.length - a[1].nodvendig.length || a[1].tilbakebetalingAar - b[1].tilbakebetalingAar)[0];
+  const beste = [...gronn.entries()].filter(([id, g]) => g.gjennomforbar && !brukt.has(id) && !sensitive.has(id)).sort((a, b) => b[1].nodvendig.length - a[1].nodvendig.length || a[1].tilbakebetalingAar - b[1].tilbakebetalingAar)[0];
   if (beste) {
     const [id, g] = beste;
     const k = kunder.find((x) => x.id === id)!;
@@ -163,10 +165,11 @@ export function lagAgenda(
 
   // 5. Glemte kunder med signaler
   for (const k of sortert) {
-    if (brukt.has(k.id)) continue;
+    if (brukt.has(k.id) || sensitive.has(k.id)) continue;
     const v = vurderinger.get(k.id)!;
-    const dager = dagerMellom(k.sisteKontakt, DAGENS_DATO);
-    if (dager <= 120 || v.score < 15) continue;
+    const dagerKontakt = dagerSiden(k.sisteKontakt);
+    const dager = dagerKontakt ?? Infinity;
+    if (dager <= 365 || v.score < 15) continue;
     oppgaver.push({
       id: `mote-${k.id}`,
       kundeId: k.id,
@@ -174,7 +177,7 @@ export function lagAgenda(
       kontakt: k.dagligLeder,
       type: "mote",
       tittel: `Book møte med ${k.navn}`,
-      grunn: `Ikke kontaktet på ${dager} dager. ${v.faktorer.filter((f) => f.poeng > 0 && f.id !== "kontakt").sort((a, b) => b.poeng - a.poeng)[0]?.forklaring ?? ""}`,
+      grunn: `${dagerKontakt === null ? "Ingen registrert kontakt." : `Ikke kontaktet på ${dager} dager.`} ${v.faktorer.filter((f) => f.poeng > 0 && f.id !== "kontakt").sort((a, b) => b.poeng - a.poeng)[0]?.forklaring ?? ""}`,
       frist: "Denne uken",
       minutterUten: 20,
       minutterMed: 5,

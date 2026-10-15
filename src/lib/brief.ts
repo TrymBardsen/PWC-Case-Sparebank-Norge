@@ -4,7 +4,7 @@
 import { z } from "zod";
 import type { Kunde } from "./types";
 import type { Smitte, Vurdering } from "./score";
-import { DAGENS_DATO, dagerMellom, kortDato, langDato } from "./dato";
+import { DAGENS_DATO, dagerMellom, dagerSiden, kortDato, langDato } from "./dato";
 import { oppsummerPoster } from "./prognose";
 import { tiltakFor, vurderTiltak } from "./tiltak";
 import { kr, mnok, omUker, prosent } from "./format";
@@ -53,7 +53,13 @@ export function lagFakta(kunde: Kunde, vurdering: Vurdering, smitte: Smitte[], a
       risikoklasse: kunde.risikoklasse,
       sesongbedrift: kunde.sesongbedrift,
       samtykkeniva: kunde.samtykke,
-      regnskapIFjor: { omsetning: mnok(kunde.regnskapIFjor.driftsinntekter), resultat: kr(kunde.regnskapIFjor.aarsresultat), egenkapital: kr(kunde.regnskapIFjor.egenkapital) },
+      regnskap2025: {
+        omsetning: mnok(kunde.regnskapIFjor.driftsinntekter),
+        driftsresultat: kr(kunde.regnskapIFjor.driftsresultat),
+        egenkapitalandel: prosent(kunde.regnskapIFjor.egenkapitalAndel),
+        omsetningsutvikling: kunde.regnskapIFjor.omsetning.map((o) => `${o.aar}: ${mnok(o.belop)}`),
+      },
+      sensitivSituasjon: kunde.sensitiv ?? null,
     },
     engasjement: {
       kassekredittRamme: kr(kunde.kassekredittRamme),
@@ -93,7 +99,7 @@ export function lagFakta(kunde: Kunde, vurdering: Vurdering, smitte: Smitte[], a
       .filter((s) => s.fra === kunde.id || s.til === kunde.id)
       .map((s) => (s.fra === kunde.id ? `${navn(s.til)} får ${prosent(s.andel)} av innbetalingene sine fra denne kunden` : `Får ${prosent(s.andel)} av innbetalingene fra ${navn(s.fra)}`)),
     rådgivernotater: kunde.notater,
-    dagerSidenSisteKontakt: dagerMellom(kunde.sisteKontakt, DAGENS_DATO),
+    dagerSidenSisteKontakt: dagerSiden(kunde.sisteKontakt) ?? "ingen registrert kontakt",
   };
 }
 
@@ -106,6 +112,7 @@ Du får et JSON-objekt med fakta som banken allerede har beregnet. Regler:
 - Målet er å hjelpe kunden gjennom en vanskelig periode, ikke å redusere bankens risiko for enhver pris. Unngå tiltak som kan utløse krisen (f.eks. å kutte rammen nå).
 - Insolvensgrensen er når kassekreditten er brukt opp. Forklar hvor nær kunden er grensen, når den passeres og hvor sannsynlig det er.
 - Tiltak skal velges fra listen tiltak, bruke effekttallene derfra og helst bygge på anbefaltPakke. Merk tiltak som er betalingslettelser: de må vurderes, merkes og dokumenteres etter bankens retningslinjer.
+- Hvis sensitivSituasjon er satt, skal du respektere det som er avtalt med kunden: foreslå bare praktisk oppfølging, ingen salg eller press, og si tydelig at rådgiveren bør vurdere om kontakt er passende nå.
 - Taushetsplikt: nettverk og debitorer som også er kunder i banken er intern informasjon. Nevn dem aldri ved navn i apning eller sporsmal, som sies til kunden.
 - Bruk tekstsignalene (ordrette sitater fra e-post, nyheter og notater) når de forklarer situasjonen, og oppgi kilden.
 - Du er beslutningsstøtte. Rådgiveren tar beslutningen.
@@ -113,6 +120,18 @@ Du får et JSON-objekt med fakta som banken allerede har beregnet. Regler:
 
 // Regelbasert reserve, brukes når API-nøkkel mangler eller kallet feiler
 export function lagMalBrief(fakta: ReturnType<typeof lagFakta>, kunde: Kunde): Brief {
+  // Sensitiv situasjon: bare praktisk oppfølging, ingen tiltak eller salg
+  if (kunde.sensitiv) {
+    return {
+      kilde: "mal",
+      oppsummering: `${kunde.navn} er i en sensitiv situasjon. Banken har lovet bare praktisk kontakt, så dette underlaget er bare bakgrunn.`,
+      hvaHarSkjedd: [{ punkt: kunde.sensitiv, kilde: "Møtenotat" }],
+      sporsmal: ["Er det noe praktisk banken kan hjelpe med nå?"],
+      tiltak: [],
+      apning: `Hei ${kunde.dagligLeder.split(" ")[0]}, jeg ville bare høre om det er noe praktisk du trenger hjelp med fra oss. Alt annet kan vente til du er klar.`,
+      ikkeVurdert: ["Tiltak og produkter tas ikke opp før kunden selv er klar, i tråd med avtalen."],
+    };
+  }
   const p = fakta.prognose;
   const signaler = [...fakta.signaler].filter((s) => s.poeng > 0).sort((a, b) => b.poeng - a.poeng);
   const storste = kunde.debitorer[0];
