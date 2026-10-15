@@ -44,7 +44,7 @@ Ett samtaleunderlag koster noen få øre.
 1. **Portefølje:** «God morgen, Kari.» Åsane Interiør er øverst, men de har allerede ringt selv. Det interessante er nr. 2.
 2. **Fjellsiden Bygg:** Ingen har ringt. Prognosen passerer insolvensgrensen (−2,5 MNOK, kassekreditten brukt opp) 20. november når lønnen går ut, med 74 % sannsynlighet. Den røde sonen og ukestripen viser når risikoen er størst.
 3. **Hva om:** Slå på «Vestland Eiendom betaler 30 dager senere». Rådgivernotatet fra august sa at de drar ut betalingene. Grensen passeres 15. november, og underskuddet vokser.
-4. **Tiltak mot mislighold:** Slå av scenarioet. Slå på avdragsfrihet og betalingsavtale for MVA, som gir kunden pusterom uten nye bankprodukter. Søylediagrammet viser at det ikke er nok alene. Legg til kostnadstiltak, og kombinasjonen havner over grensen.
+4. **Tiltak mot mislighold:** Slå av scenarioet. Slå på avdragsfrihet og betalingsavtale for MVA, som gir kunden pusterom uten nye bankprodukter. Søylediagrammet viser at det ikke er nok alene. Legg til kostnadstiltak: kombinasjonen holder seg så vidt over grensen (+43 000 kr), men sannsynligheten er fortsatt 47 %.
 5. **Anbefalt pakke:** «Vis i prognosen». Løpende factoring holder kunden 0,8 MNOK over grensen, og sannsynligheten faller fra 74 % til 5 %. Betalingslettelser er merket.
 6. **Forbered samtale:** Samtaleunderlag med åpningsreplikk, spørsmål og tiltak med effekt i kroner. Merket som utkast, og rådgiveren bestemmer.
 7. **Kontrast:** Åsane Interiør. Selv anbefalt pakke er ikke nok, så appen anbefaler spesialenhet eller rekonstruksjon.
