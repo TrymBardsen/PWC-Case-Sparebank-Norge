@@ -93,14 +93,17 @@ API-nøkkelen brukes server-side. Husk at samtalefakta sendes til Anthropic når
 
 Tekstanalysen kan kjøres med Claude per kunde («Analyser med Claude» på kundesiden) eller for alle med `npm run tekstsignaler`. Resultatet lagres i `data/tekstsignaler.json` og brukes i scoren. Uten nøkkel brukes en regelbasert ordliste. Uansett forkastes signaler der sitatet ikke finnes ordrett i kilden.
 
-### KI-møterapport (Claude Desktop, uten API-nøkkel)
+### KI-møterapport (uten API-nøkkel)
 
-Knappen «Lag møterapport med KI» på kundeanalysen åpner `/kunde/[id]/rapport`:
+Knappen «Lag møterapport med KI» på kundeanalysen åpner `/kunde/[id]/rapport`. For nettsiden ser det ut som et vanlig, asynkront API-kall, men forespørselen går til en Claude Code-økt via en kø på disk («rapportbroen», `src/lib/kiKo.ts`):
 
-1. Appen lager en prompt med en kildekatalog (bankens data for kunden: kundebilde, regnskap, engasjement, prognose, score, tiltak, hendelser og notater, hver med ID) og et JSON-skjema generert fra Zod-skjemaet `RapportSchema` i `src/lib/rapport.ts`.
-2. Rådgiveren kopierer prompten til Claude Desktop med websøk slått på. Claude kan bare bruke katalogen og nyheter om bransje, region og makro (bedriften er fiktiv).
-3. Svaret limes inn og valideres med Zod. Hvert punkt må ha kildehenvisning med ordrett sitat. Sitater sjekkes mot katalogen, nettkilder hentes på serveren (`/api/verifiser-web`, bare https og offentlige adresser) og kontrolleres, og tall i teksten må finnes i de siterte kildene.
-4. Rapporten vises på én side med nummererte kilder og kan skrives ut eller lagres som PDF. Punkter uten gyldig kilde strekes over.
+1. «Generer møterapport» sender `POST /api/rapport/generer`. Serveren bygger en prompt med en kildekatalog (bankens data for kunden: kundebilde, regnskap, engasjement, prognose, score, tiltak, hendelser og notater, hver med ID) og et JSON-skjema generert fra Zod-skjemaet `RapportSchema` i `src/lib/rapport.ts`. Prompten legges i `data/ki-ko/<jobbId>.foresporsel.json` (og `.prompt.md`), og svaret er `202 { jobbId }`.
+2. En Claude Code-økt følger med på køen med `./scripts/vent-pa-ki.sh`, som avslutter og skriver ut filnavnet når det kommer en ubesvart forespørsel. Claude leser prompten, søker etter nyheter om bransje, region og makro (bedriften er fiktiv) og skriver svaret til `data/ki-ko/<jobbId>.svar.json`.
+3. Nettsiden spør `GET /api/rapport/status?jobb=<jobbId>` hvert 2. sekund og viser fremdriften. Etter 8 minutter uten svar får brukeren beskjed om å sjekke at Claude-økten er åpen.
+4. Svaret valideres med Zod. Hvert punkt må ha kildehenvisning med ordrett sitat. Sitater sjekkes mot katalogen, nettkilder hentes på serveren (`/api/verifiser-web`, bare https og offentlige adresser) og kontrolleres, og tall i teksten må finnes i de siterte kildene.
+5. Rapporten vises på én side med nummererte kilder og kan skrives ut eller lagres som PDF. Punkter uten gyldig kilde strekes over.
+
+**Under demoen** må Claude Code-økten være åpen og ha `./scripts/vent-pa-ki.sh` kjørende i bakgrunnen; start den på nytt etter hvert svar. Det er også mulig å kjøre prompten manuelt i Claude Desktop og lime inn svaret (under «Kjør manuelt i Claude Desktop i stedet»). Køen (`data/ki-ko/`) er ikke med i git.
 
 ## Demo
 

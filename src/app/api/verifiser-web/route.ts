@@ -28,16 +28,23 @@ async function trygg(url: URL): Promise<boolean> {
   }
 }
 
+// Navngitte entiteter som er vanlige på norske nettsider (f.eks. Norges Bank skriver «&aring;»)
+const ENTITETER: Record<string, string> = {
+  nbsp: " ", amp: "&", quot: '"', apos: "'", lt: "<", gt: ">",
+  aring: "å", Aring: "Å", oslash: "ø", Oslash: "Ø", aelig: "æ", AElig: "Æ",
+  eacute: "é", Eacute: "É", auml: "ä", ouml: "ö", uuml: "ü",
+  ndash: "–", mdash: "—", hellip: "…", laquo: "«", raquo: "»",
+  lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”", shy: "",
+};
+
 function tekstFraHtml(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-    .replace(/&[a-z]+;/g, " ");
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&([a-zA-Z]+);/g, (_, n) => ENTITETER[n] ?? " ");
 }
 
 async function sjekk(kilde: { id: string; url: string; sitat: string }): Promise<Sitatstatus> {

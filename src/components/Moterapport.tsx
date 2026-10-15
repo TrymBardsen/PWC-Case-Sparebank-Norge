@@ -18,6 +18,9 @@ export function Moterapport({ kundeId, kundenavn, dato, prompt, katalog }: { kun
   const [webStatus, setWebStatus] = useState<Record<string, Sitatstatus>>({});
   const [kopiert, setKopiert] = useState(false);
   const [visPrompt, setVisPrompt] = useState(false);
+  const [jobb, setJobb] = useState<{ id: string; start: number; steg: 0 | 1 | 2 } | null>(null);
+  const [sekunder, setSekunder] = useState(0);
+  const [jobbFeil, setJobbFeil] = useState<string | null>(null);
 
   const valider = useCallback(
     async (tekst: string) => {
@@ -70,6 +73,41 @@ export function Moterapport({ kundeId, kundenavn, dato, prompt, katalog }: { kun
     }
   }, [nokkel, valider]);
 
+  // «API-kall»: legger forespørselen i køen og venter på svar fra Claude
+  async function generer() {
+    setJobbFeil(null);
+    setFeil([]);
+    const res = await fetch("/api/rapport/generer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kundeId }) });
+    if (!res.ok) {
+      setJobbFeil("Kunne ikke starte genereringen.");
+      return;
+    }
+    const { jobbId } = (await res.json()) as { jobbId: string };
+    setJobb({ id: jobbId, start: Date.now(), steg: 1 });
+  }
+
+  useEffect(() => {
+    if (!jobb || jobb.steg !== 1) return;
+    const t = setInterval(async () => {
+      setSekunder(Math.round((Date.now() - jobb.start) / 1000));
+      const res = await fetch(`/api/rapport/status?jobb=${encodeURIComponent(jobb.id)}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const s = (await res.json()) as { status: string; svar?: string };
+      if (s.status === "ferdig" && s.svar) {
+        clearInterval(t);
+        setJobb({ ...jobb, steg: 2 });
+        setSvar(s.svar);
+        await valider(s.svar);
+        setJobb(null);
+      } else if (Date.now() - jobb.start > 8 * 60_000) {
+        clearInterval(t);
+        setJobb(null);
+        setJobbFeil("Fikk ikke svar innen 8 minutter. Er Claude-økten som behandler køen åpen? Du kan også kjøre manuelt under.");
+      }
+    }, 2000);
+    return () => clearInterval(t);
+  }, [jobb, valider]);
+
   async function kopier() {
     await navigator.clipboard.writeText(prompt);
     setKopiert(true);
@@ -103,7 +141,40 @@ export function Moterapport({ kundeId, kundenavn, dato, prompt, katalog }: { kun
   return (
     <div className="space-y-6">
       {!rapport && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 print:hidden">
+        <Kort overtittel="KI-generering" tittel="Generer møterapport" className="print:hidden">
+          {!jobb ? (
+            <div className="flex flex-wrap items-center gap-4">
+              <button onClick={generer} className="rounded-md bg-snb-rod px-6 py-3 text-sm font-semibold text-white hover:bg-snb-rod-mork">
+                Generer møterapport →
+              </button>
+              <span className="text-sm text-slate-600">
+                Claude leser {katalog.length} kilder fra bankens data, søker etter nyheter om bransjen og lager en rapport på én side med kildehenvisninger.
+              </span>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Fremdrift aktiv={jobb.steg} sekunder={sekunder} />
+              <p className="text-xs text-slate-500">Dette tar vanligvis 1–3 minutter, siden Claude også søker etter nyheter på nettet.</p>
+            </div>
+          )}
+          {jobbFeil && <p className="mt-3 text-sm text-red-700">{jobbFeil}</p>}
+          {feil.length > 0 && (
+            <div className="mt-3 rounded-lg border border-red-200 bg-snb-rod-lys p-3 text-xs text-red-800">
+              <div className="mb-1 font-semibold">Svaret fulgte ikke skjemaet ({feil.length} feil). Prøv å generere på nytt.</div>
+              <ul className="list-disc space-y-0.5 pl-4">
+                {feil.slice(0, 8).map((f) => (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Kort>
+      )}
+
+      {!rapport && !jobb && (
+        <details className="print:hidden">
+          <summary className="cursor-pointer text-sm font-semibold text-snb-rod">Kjør manuelt i Claude Desktop i stedet</summary>
+        <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Kort overtittel="Steg 1" tittel="Kjør prompten i Claude Desktop">
             <ol className="mb-4 list-decimal space-y-1 pl-5 text-sm text-slate-700">
               <li>Kopier prompten. Den inneholder kildekatalogen ({katalog.length} kilder) og JSON-skjemaet svaret må følge.</li>
@@ -154,6 +225,7 @@ export function Moterapport({ kundeId, kundenavn, dato, prompt, katalog }: { kun
             )}
           </Kort>
         </div>
+        </details>
       )}
 
       {rapport && kontroll && (
@@ -356,5 +428,29 @@ function Kontrollpanel({
         </ul>
       )}
     </div>
+  );
+}
+
+function Fremdrift({ aktiv, sekunder }: { aktiv: 0 | 1 | 2; sekunder: number }) {
+  const steg = ["Forespørsel sendt til Claude", "Claude analyserer kildene og søker etter nyheter", "Validerer svaret (Zod) og kontrollerer kilder"];
+  const naa = aktiv === 1 && sekunder < 3 ? 0 : aktiv;
+  return (
+    <ol className="space-y-2 text-sm">
+      {steg.map((t, i) => (
+        <li key={t} className="flex items-center gap-3">
+          <span
+            className={`grid h-5 w-5 place-items-center rounded-full text-[10px] font-bold ${
+              i < naa ? "bg-snb-gronn text-white" : i === naa ? "animate-pulse bg-snb-rod text-white" : "bg-slate-200 text-slate-500"
+            }`}
+          >
+            {i < naa ? "✓" : i + 1}
+          </span>
+          <span className={i === naa ? "font-semibold text-slate-900" : i < naa ? "text-slate-600" : "text-slate-400"}>
+            {t}
+            {i === naa && i === 1 ? ` … ${sekunder} s` : ""}
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }

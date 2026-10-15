@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Kø for KI-forespørsler (rapportbroen)
+/data/ki-ko/
