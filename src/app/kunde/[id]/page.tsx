@@ -56,6 +56,15 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
             <Info tittel="Lån" verdi={mnok(kunde.lan.reduce((s, l) => s + l.saldo, 0))} />
             <Info tittel="Sikkerheter" verdi={mnok(kunde.sikkerheter)} />
             <Info tittel="Siste kontakt" verdi={kunde.sisteKontakt ? `${dagerSiden(kunde.sisteKontakt)} dager` : "Ingen registrert"} />
+            <div className="col-span-2 border-t border-slate-200 pt-3 sm:col-span-4">
+              <Link
+                href={`/kunde/${kunde.id}/rapport`}
+                className="inline-flex items-center gap-2 rounded-md bg-snb-rod px-4 py-2 text-sm font-semibold text-white hover:bg-snb-rod-mork"
+              >
+                Lag møterapport med KI →
+              </Link>
+              <span className="ml-3 text-xs text-slate-500">Én side med kildehenvisninger, før kundemøtet</span>
+            </div>
           </div>
         </div>
       </div>

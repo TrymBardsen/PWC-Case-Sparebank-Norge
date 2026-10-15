@@ -93,6 +93,15 @@ API-nøkkelen brukes server-side. Husk at samtalefakta sendes til Anthropic når
 
 Tekstanalysen kan kjøres med Claude per kunde («Analyser med Claude» på kundesiden) eller for alle med `npm run tekstsignaler`. Resultatet lagres i `data/tekstsignaler.json` og brukes i scoren. Uten nøkkel brukes en regelbasert ordliste. Uansett forkastes signaler der sitatet ikke finnes ordrett i kilden.
 
+### KI-møterapport (Claude Desktop, uten API-nøkkel)
+
+Knappen «Lag møterapport med KI» på kundeanalysen åpner `/kunde/[id]/rapport`:
+
+1. Appen lager en prompt med en kildekatalog (bankens data for kunden: kundebilde, regnskap, engasjement, prognose, score, tiltak, hendelser og notater, hver med ID) og et JSON-skjema generert fra Zod-skjemaet `RapportSchema` i `src/lib/rapport.ts`.
+2. Rådgiveren kopierer prompten til Claude Desktop med websøk slått på. Claude kan bare bruke katalogen og nyheter om bransje, region og makro (bedriften er fiktiv).
+3. Svaret limes inn og valideres med Zod. Hvert punkt må ha kildehenvisning med ordrett sitat. Sitater sjekkes mot katalogen, nettkilder hentes på serveren (`/api/verifiser-web`, bare https og offentlige adresser) og kontrolleres, og tall i teksten må finnes i de siterte kildene.
+4. Rapporten vises på én side med nummererte kilder og kan skrives ut eller lagres som PDF. Punkter uten gyldig kilde strekes over.
+
 ## Demo
 
 En foreslått gjennomgang på omtrent fem minutter:
@@ -155,5 +164,6 @@ Bygget med Next.js, React, TypeScript og Recharts. Prognosen og risikoscoren er 
 | `src/lib/brief.ts` | Fakta til samtaleutkast, validering og regelbasert reserve |
 | `src/lib/brreg.ts` | Oppslag mot Enhetsregisteret og Regnskapsregisteret |
 | `src/lib/tekst.ts`, `src/lib/tekstAi.ts` | Tekstsignaler (regelbasert og Claude) med kontroll av sitater |
+| `src/lib/rapport.ts` | Zod-skjema, kildekatalog, prompt og kildekontroll for KI-møterapporten |
 | `src/lib/agenda.ts` | Dagens agenda: neste handling, meldingsutkast og anslått spart tid |
 | `scripts/lag-tilleggsdata.ts`, `scripts/hent-ssb.ts` | Genererer tilleggsdata og henter SSB-statistikk |

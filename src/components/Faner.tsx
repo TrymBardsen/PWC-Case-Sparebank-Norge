@@ -13,7 +13,7 @@ export function Faner({ toppKunde }: { toppKunde?: string }) {
     { href: "/om", tekst: "Slik fungerer det", aktiv: sti === "/om" },
   ];
   return (
-    <nav className="flex flex-wrap justify-center gap-1 rounded-lg bg-snb-gra p-1.5">
+    <nav className="flex flex-wrap justify-center gap-1 rounded-lg bg-snb-gra p-1.5 print:hidden">
       {faner.map((f) => (
         <Link
           key={f.tekst}
