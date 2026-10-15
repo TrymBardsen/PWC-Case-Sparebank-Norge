@@ -70,6 +70,14 @@ export function tiltakFor(kunde: Kunde, parametre: Parametre = {}): Tiltak[] {
     maks: maksBelop,
     steg: 50_000,
   });
+  const pEnergi = param("energitiltak", parametre, {
+    etikett: "Strømbesparelse",
+    enhet: "%",
+    standard: Math.round((kunde.energitiltak?.besparelseAndel ?? 0) * 100),
+    min: 5,
+    maks: 60,
+    steg: 5,
+  });
   const pTilskudd = param("kapitaltilskudd", parametre, {
     etikett: "Beløp",
     enhet: "kr",
@@ -139,6 +147,20 @@ export function tiltakFor(kunde: Kunde, parametre: Parametre = {}): Tiltak[] {
       valg: { factoring: true, factoringForskudd: pFactoring.verdi / 100 },
       parameter: pFactoring,
       utilgjengelig: fakturaer === undefined ? "Krever samtykke til reskontro" : fakturaSum === 0 ? "Ingen utestående fakturaer" : undefined,
+    },
+    {
+      id: "energitiltak",
+      navn: kunde.energitiltak ? `Grønt tiltak: ${kunde.energitiltak.navn.toLowerCase()}` : "Grønt energitiltak",
+      beskrivelse: kunde.energitiltak
+        ? `Grønt lån på ${mnok(kunde.energitiltak.investering - kunde.energitiltak.enovaStotte)} og Enova-støtte på ${mnok(kunde.energitiltak.enovaStotte)}. Lavere energikostnader fra måned 2.`
+        : "",
+      aktor: "Kunden",
+      inngripen: 2,
+      betalingslettelse: false,
+      forbehold: "Krever Enova-tilsagn og kredittvurdering. Besparelsen kommer gradvis, og investeringen må gjennomføres.",
+      valg: { energitiltak: true, energiBesparelse: pEnergi.verdi / 100 },
+      parameter: kunde.energitiltak?.besparelseAndel ? pEnergi : undefined,
+      utilgjengelig: kunde.energitiltak ? undefined : "Ingen energitiltak kartlagt",
     },
     {
       id: "kkTilLan",

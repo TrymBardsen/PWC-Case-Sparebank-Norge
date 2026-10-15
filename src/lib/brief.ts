@@ -88,6 +88,7 @@ export function lagFakta(kunde: Kunde, vurdering: Vurdering, smitte: Smitte[], a
     })),
     ikkeMuligeTiltak: tiltakFor(kunde).filter((t) => t.utilgjengelig).map((t) => `${t.navn}: ${t.utilgjengelig}`),
     anbefaltPakke: tv.pakke ? { tiltak: tv.pakke.tiltak.map((t) => t.navn), ...effekt(tv.pakke.prognose) } : "ingen tiltak nødvendig",
+    tekstsignaler: vurdering.tekstanalyse.signaler.map((t) => ({ kategori: t.kategori, sitat: t.sitat, gjelderKunde: t.gjelderDebitor, kilde: kunde.tekster.find((x) => x.id === t.kildeId)?.avsender ?? "Rådgivernotat" })),
     nettverk: smitte
       .filter((s) => s.fra === kunde.id || s.til === kunde.id)
       .map((s) => (s.fra === kunde.id ? `${navn(s.til)} får ${prosent(s.andel)} av innbetalingene sine fra denne kunden` : `Får ${prosent(s.andel)} av innbetalingene fra ${navn(s.fra)}`)),
@@ -105,6 +106,8 @@ Du får et JSON-objekt med fakta som banken allerede har beregnet. Regler:
 - Målet er å hjelpe kunden gjennom en vanskelig periode, ikke å redusere bankens risiko for enhver pris. Unngå tiltak som kan utløse krisen (f.eks. å kutte rammen nå).
 - Insolvensgrensen er når kassekreditten er brukt opp. Forklar hvor nær kunden er grensen, når den passeres og hvor sannsynlig det er.
 - Tiltak skal velges fra listen tiltak, bruke effekttallene derfra og helst bygge på anbefaltPakke. Merk tiltak som er betalingslettelser: de må vurderes, merkes og dokumenteres etter bankens retningslinjer.
+- Taushetsplikt: nettverk og debitorer som også er kunder i banken er intern informasjon. Nevn dem aldri ved navn i apning eller sporsmal, som sies til kunden.
+- Bruk tekstsignalene (ordrette sitater fra e-post, nyheter og notater) når de forklarer situasjonen, og oppgi kilden.
 - Du er beslutningsstøtte. Rådgiveren tar beslutningen.
 - Skriv på norsk bokmål, kort og presist, uten markdown.`;
 
@@ -141,7 +144,7 @@ export function lagMalBrief(fakta: ReturnType<typeof lagFakta>, kunde: Kunde): B
     ],
     sporsmal: [
       "Hvordan ser ordrereserven ut for de neste tre månedene?",
-      storste ? `Hvordan er dialogen med ${storste.navn} om betalingene?` : "Hvem er de viktigste kundene deres nå?",
+      storste && !storste.internKunde ? `Hvordan er dialogen med ${storste.navn} om betalingene?` : "Hvordan betaler de største kundene deres nå?",
       "Hvilke store utbetalinger har dere de neste ukene, og har dere en plan for dem?",
       "Har dere vurdert tiltak på kostnadssiden?",
       "Er det noe vi i banken bør vite som ikke står i tallene?",

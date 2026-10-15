@@ -5,7 +5,7 @@
 // slik at de aldri kan tilhøre en ekte virksomhet.
 
 import { writeFileSync } from "node:fs";
-import type { Bransje, Debitor, Faktura, FasteKostnader, Kunde, Lan, Notat, Portefolje, Restanser, Samtykkeniva } from "../src/lib/types.ts";
+import type { Bransje, Debitor, Energitiltak, Faktura, FasteKostnader, Kunde, Lan, Notat, Portefolje, Restanser, Samtykkeniva, Tekstkilde } from "../src/lib/types.ts";
 import { DAGENS_DATO, leggTilDager, mandagI, tilDato, ukedag } from "../src/lib/dato.ts";
 import { kjentePoster } from "../src/lib/kalender.ts";
 import { SESONG } from "../src/lib/sesong.ts";
@@ -72,6 +72,176 @@ interface Profil {
   notater: Notat[];
   regnskapIFjor: Kunde["regnskapIFjor"];
 }
+
+// Simulert ustrukturert tekst per kunde (e-post, nyheter, kunngjøringer)
+const TEKSTER: Record<string, Omit<Tekstkilde, "id">[]> = {
+  "fjellsiden-bygg": [
+    {
+      type: "nyhet",
+      dato: "2026-10-02",
+      avsender: "Byggeindustrien (simulert)",
+      tittel: "Vestland Eiendom setter Kronstad-prosjektet på vent",
+      tekst:
+        "Utbygger Vestland Eiendom setter fase 2 av boligprosjektet på Kronstad på vent etter svakt boligsalg i Bergen. – Vi avventer markedet før vi går videre, sier daglig leder. Entreprenørene på fase 1 skal fullføre som planlagt.",
+    },
+    {
+      type: "epost",
+      dato: "2026-10-08",
+      avsender: "Geir Haukeland, Fjellsiden Bygg",
+      tittel: "Spørsmål om avdrag",
+      tekst:
+        "Hei Kari. Er det mulig å få utsatt avdraget på maskinlånet i november? Vestland Eiendom har bedt om 60 dagers betalingsfrist på resten av fase 1, og vi må forskuttere materialer på en ny jobb i Åsane. Vi har også sagt opp to lærlinger. Hilsen Geir",
+    },
+  ],
+  "sandviken-ror": [
+    {
+      type: "epost",
+      dato: "2026-10-12",
+      avsender: "Tor Erik Mjelde, Sandviken Rør",
+      tittel: "Kassekreditt",
+      tekst:
+        "Hei. Fjellsiden Bygg ligger nå over 40 dager etter med betalingene til oss, og vi har stoppet videre arbeid for dem til vi får betalt. Kan vi ta en prat om kassekreditten før lønn i november?",
+    },
+  ],
+  "bergenhus-transport": [
+    {
+      type: "kunngjoring",
+      dato: "2026-10-06",
+      avsender: "Doffin (simulert)",
+      tittel: "Anbudskonkurranse: distribusjon Vestlandet",
+      tekst:
+        "Dagligvaregrossisten lyser ut ny anbudskonkurranse for distribusjon på Vestlandet med oppstart 1. april 2027. Leverandører må dokumentere nullutslippskjøretøy for minst halve flåten innen 2028.",
+    },
+    {
+      type: "epost",
+      dato: "2026-09-30",
+      avsender: "Rune Vik, Bergenhus Transport",
+      tittel: "Info",
+      tekst:
+        "Hei Kari. Vi har fått beskjed om at transportavtalen ikke forlenges automatisk fra april. Vi skal delta i anbudet, men konkurransen blir hard og vi har ingen elektriske lastebiler i dag.",
+    },
+  ],
+  "asane-interior": [
+    {
+      type: "nyhet",
+      dato: "2026-08-20",
+      avsender: "Åsane Tidende (simulert)",
+      tittel: "Ny møbelkjede til Åsane",
+      tekst: "En stor lavpriskjede for møbler åpner i Åsane senter i september. Kjeden lover priser 30 prosent under konkurrentene.",
+    },
+    {
+      type: "kunngjoring",
+      dato: "2026-10-01",
+      avsender: "Inkassovarsel (simulert)",
+      tekst: "Inkassovarsel fra Nordic Møbelimport AS gjelder ubetalt faktura på 214 000 kr med forfall 15. august.",
+    },
+  ],
+  "bryggen-bistro": [
+    {
+      type: "nyhet",
+      dato: "2026-09-15",
+      avsender: "Bergens Tidende (simulert)",
+      tittel: "Færre cruiseanløp neste år",
+      tekst: "Bergen havn venter færre cruiseanløp i 2027 etter nye miljøkrav til skip i verdensarvfjordene. Reiselivsnæringen i sentrum frykter nedgang i omsetningen.",
+    },
+  ],
+  "solheimsviken-verksted": [
+    {
+      type: "epost",
+      dato: "2026-09-20",
+      avsender: "Innkjøp, Fjord Line-avtalen",
+      tittel: "Krav til leverandører fra 2027",
+      tekst:
+        "Fra 2027 krever vi klimaregnskap og en plan for utslippskutt fra alle verftsleverandører, i tråd med våre CSRD-forpliktelser. Leverandører uten plan vil få lavere score i neste anbud.",
+    },
+    {
+      type: "nyhet",
+      dato: "2026-10-09",
+      avsender: "iLaks (simulert)",
+      tittel: "Havbruk Vest permitterer",
+      tekst: "Havbruk Vest varsler permitteringer av 40 ansatte etter fall i lakseprisen og høyere produksjonsavgift.",
+    },
+  ],
+  "nordnes-sjomat": [
+    {
+      type: "nyhet",
+      dato: "2026-10-05",
+      avsender: "Fiskeribladet (simulert)",
+      tittel: "Strengere importkontroll i Polen",
+      tekst: "Polen innfører strengere importkontroll på sjømat fra 1. desember. Eksportører må regne med lengre ventetid i tollen.",
+    },
+  ],
+  "kronstad-it": [
+    {
+      type: "nyhet",
+      dato: "2026-09-25",
+      avsender: "Digi.no (simulert)",
+      tekst: "Kronstad IT-Consult vinner ny rammeavtale med offentlig etat. Avtalen er fornyet til 2028 med opsjon på forlengelse.",
+    },
+  ],
+  "fyllingsdalen-bakeri": [
+    {
+      type: "epost",
+      dato: "2026-10-01",
+      avsender: "Liv Johannessen, Fyllingsdalen Bakeri",
+      tittel: "Energi",
+      tekst: "Hei. Strømregningen har blitt en av de største kostnadene våre. Vi vurderer varmegjenvinning på ovnene. Har dere grønne lån, og vet du om Enova gir støtte?",
+    },
+  ],
+};
+
+// Konkrete energitiltak for energiintensive kunder (anslag)
+const ENERGI: Record<string, { tiltak: Energitiltak; klimakrav?: string }> = {
+  "solheimsviken-verksted": {
+    tiltak: {
+      navn: "Varmepumpe og solceller på verkstedhallen",
+      beskrivelse: "Luft-til-vann-varmepumpe erstatter elektrisk oppvarming, og solceller på taket dekker deler av dagforbruket.",
+      investering: 2_400_000,
+      enovaStotte: 600_000,
+      besparelseAndel: 0.32,
+    },
+    klimakrav: "Fjord Line krever klimaregnskap og plan for utslippskutt fra 2027 (CSRD).",
+  },
+  "bryggen-bistro": {
+    tiltak: {
+      navn: "Nytt kjøleanlegg med varmegjenvinning",
+      beskrivelse: "Moderne kjøle- og fryseanlegg med naturlig kuldemedium, der spillvarmen brukes til varmtvann.",
+      investering: 650_000,
+      enovaStotte: 120_000,
+      besparelseAndel: 0.28,
+    },
+  },
+  "fyllingsdalen-bakeri": {
+    tiltak: {
+      navn: "Varmegjenvinning på ovnene",
+      beskrivelse: "Spillvarme fra ovnene gjenvinnes til oppvarming og varmtvann. Styring av ovnene etter produksjonsplan.",
+      investering: 900_000,
+      enovaStotte: 200_000,
+      besparelseAndel: 0.35,
+    },
+  },
+  "nordnes-sjomat": {
+    tiltak: {
+      navn: "Oppgradering av kjølelageret",
+      beskrivelse: "Ny isolasjon, frekvensstyrte kompressorer og varmegjenvinning fra kjøleanlegget.",
+      investering: 1_200_000,
+      enovaStotte: 250_000,
+      besparelseAndel: 0.25,
+    },
+  },
+  "bergenhus-transport": {
+    tiltak: {
+      navn: "Ladeanlegg og to elektriske lastebiler",
+      beskrivelse: "Første steg mot nullutslippsflåte: to elektriske distribusjonsbiler med lading på depotet erstatter diesel.",
+      investering: 4_800_000,
+      enovaStotte: 1_400_000,
+      besparelseAndel: 0,
+      annenBesparelsePerAar: 480_000, // spart diesel og vedlikehold minus strøm til lading
+      co2TonnPerAar: 62,
+    },
+    klimakrav: "Dagligvaregrossisten krever nullutslippskjøretøy for halve flåten innen 2028 i nytt anbud.",
+  },
+};
 
 const STROMPRIS_KWH = 1.45; // ca. NO5, oktober 2026 (inkl. nettleie-tillegg holdes utenfor)
 
@@ -643,6 +813,9 @@ function lagKunde(p: Profil, indeks: number): Kunde {
     sisteKontakt: p.sisteKontakt,
     notater: p.notater,
     regnskapIFjor: p.regnskapIFjor,
+    tekster: (TEKSTER[p.id] ?? []).map((t, i) => ({ ...t, id: `${p.id}-t${i + 1}` })),
+    energitiltak: ENERGI[p.id]?.tiltak,
+    klimakrav: ENERGI[p.id]?.klimakrav,
   };
 }
 

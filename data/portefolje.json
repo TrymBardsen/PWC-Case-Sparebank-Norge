@@ -1,5 +1,5 @@
 {
- "generert": "2026-10-15T16:50:13.981Z",
+ "generert": "2026-10-15T18:27:22.973Z",
  "dagensDato": "2026-10-15",
  "radgiver": "Kari Nilsen",
  "kunder": [
@@ -835,7 +835,25 @@
     "driftsinntekter": 43800000,
     "aarsresultat": 1240000,
     "egenkapital": 5900000
-   }
+   },
+   "tekster": [
+    {
+     "type": "nyhet",
+     "dato": "2026-10-02",
+     "avsender": "Byggeindustrien (simulert)",
+     "tittel": "Vestland Eiendom setter Kronstad-prosjektet på vent",
+     "tekst": "Utbygger Vestland Eiendom setter fase 2 av boligprosjektet på Kronstad på vent etter svakt boligsalg i Bergen. – Vi avventer markedet før vi går videre, sier daglig leder. Entreprenørene på fase 1 skal fullføre som planlagt.",
+     "id": "fjellsiden-bygg-t1"
+    },
+    {
+     "type": "epost",
+     "dato": "2026-10-08",
+     "avsender": "Geir Haukeland, Fjellsiden Bygg",
+     "tittel": "Spørsmål om avdrag",
+     "tekst": "Hei Kari. Er det mulig å få utsatt avdraget på maskinlånet i november? Vestland Eiendom har bedt om 60 dagers betalingsfrist på resten av fase 1, og vi må forskuttere materialer på en ny jobb i Åsane. Vi har også sagt opp to lærlinger. Hilsen Geir",
+     "id": "fjellsiden-bygg-t2"
+    }
+   ]
   },
   {
    "id": "sandviken-ror",
@@ -1597,7 +1615,17 @@
     "driftsinntekter": 11400000,
     "aarsresultat": 610000,
     "egenkapital": 2100000
-   }
+   },
+   "tekster": [
+    {
+     "type": "epost",
+     "dato": "2026-10-12",
+     "avsender": "Tor Erik Mjelde, Sandviken Rør",
+     "tittel": "Kassekreditt",
+     "tekst": "Hei. Fjellsiden Bygg ligger nå over 40 dager etter med betalingene til oss, og vi har stoppet videre arbeid for dem til vi får betalt. Kan vi ta en prat om kassekreditten før lønn i november?",
+     "id": "sandviken-ror-t1"
+    }
+   ]
   },
   {
    "id": "laksevag-elektro",
@@ -2385,7 +2413,8 @@
     "driftsinntekter": 17900000,
     "aarsresultat": 1480000,
     "egenkapital": 4300000
-   }
+   },
+   "tekster": []
   },
   {
    "id": "asane-interior",
@@ -3142,7 +3171,24 @@
     "driftsinntekter": 13100000,
     "aarsresultat": -380000,
     "egenkapital": 520000
-   }
+   },
+   "tekster": [
+    {
+     "type": "nyhet",
+     "dato": "2026-08-20",
+     "avsender": "Åsane Tidende (simulert)",
+     "tittel": "Ny møbelkjede til Åsane",
+     "tekst": "En stor lavpriskjede for møbler åpner i Åsane senter i september. Kjeden lover priser 30 prosent under konkurrentene.",
+     "id": "asane-interior-t1"
+    },
+    {
+     "type": "kunngjoring",
+     "dato": "2026-10-01",
+     "avsender": "Inkassovarsel (simulert)",
+     "tekst": "Inkassovarsel fra Nordic Møbelimport AS gjelder ubetalt faktura på 214 000 kr med forfall 15. august.",
+     "id": "asane-interior-t2"
+    }
+   ]
   },
   {
    "id": "bryggen-bistro",
@@ -3898,6 +3944,23 @@
     "driftsinntekter": 14600000,
     "aarsresultat": 290000,
     "egenkapital": 1100000
+   },
+   "tekster": [
+    {
+     "type": "nyhet",
+     "dato": "2026-09-15",
+     "avsender": "Bergens Tidende (simulert)",
+     "tittel": "Færre cruiseanløp neste år",
+     "tekst": "Bergen havn venter færre cruiseanløp i 2027 etter nye miljøkrav til skip i verdensarvfjordene. Reiselivsnæringen i sentrum frykter nedgang i omsetningen.",
+     "id": "bryggen-bistro-t1"
+    }
+   ],
+   "energitiltak": {
+    "navn": "Nytt kjøleanlegg med varmegjenvinning",
+    "beskrivelse": "Moderne kjøle- og fryseanlegg med naturlig kuldemedium, der spillvarmen brukes til varmtvann.",
+    "investering": 650000,
+    "enovaStotte": 120000,
+    "besparelseAndel": 0.28
    }
   },
   {
@@ -4687,7 +4750,33 @@
     "driftsinntekter": 49200000,
     "aarsresultat": 2050000,
     "egenkapital": 14800000
-   }
+   },
+   "tekster": [
+    {
+     "type": "epost",
+     "dato": "2026-09-20",
+     "avsender": "Innkjøp, Fjord Line-avtalen",
+     "tittel": "Krav til leverandører fra 2027",
+     "tekst": "Fra 2027 krever vi klimaregnskap og en plan for utslippskutt fra alle verftsleverandører, i tråd med våre CSRD-forpliktelser. Leverandører uten plan vil få lavere score i neste anbud.",
+     "id": "solheimsviken-verksted-t1"
+    },
+    {
+     "type": "nyhet",
+     "dato": "2026-10-09",
+     "avsender": "iLaks (simulert)",
+     "tittel": "Havbruk Vest permitterer",
+     "tekst": "Havbruk Vest varsler permitteringer av 40 ansatte etter fall i lakseprisen og høyere produksjonsavgift.",
+     "id": "solheimsviken-verksted-t2"
+    }
+   ],
+   "energitiltak": {
+    "navn": "Varmepumpe og solceller på verkstedhallen",
+    "beskrivelse": "Luft-til-vann-varmepumpe erstatter elektrisk oppvarming, og solceller på taket dekker deler av dagforbruket.",
+    "investering": 2400000,
+    "enovaStotte": 600000,
+    "besparelseAndel": 0.32
+   },
+   "klimakrav": "Fjord Line krever klimaregnskap og plan for utslippskutt fra 2027 (CSRD)."
   },
   {
    "id": "bergenhus-transport",
@@ -5443,7 +5532,35 @@
     "driftsinntekter": 24700000,
     "aarsresultat": 410000,
     "egenkapital": 3200000
-   }
+   },
+   "tekster": [
+    {
+     "type": "kunngjoring",
+     "dato": "2026-10-06",
+     "avsender": "Doffin (simulert)",
+     "tittel": "Anbudskonkurranse: distribusjon Vestlandet",
+     "tekst": "Dagligvaregrossisten lyser ut ny anbudskonkurranse for distribusjon på Vestlandet med oppstart 1. april 2027. Leverandører må dokumentere nullutslippskjøretøy for minst halve flåten innen 2028.",
+     "id": "bergenhus-transport-t1"
+    },
+    {
+     "type": "epost",
+     "dato": "2026-09-30",
+     "avsender": "Rune Vik, Bergenhus Transport",
+     "tittel": "Info",
+     "tekst": "Hei Kari. Vi har fått beskjed om at transportavtalen ikke forlenges automatisk fra april. Vi skal delta i anbudet, men konkurransen blir hard og vi har ingen elektriske lastebiler i dag.",
+     "id": "bergenhus-transport-t2"
+    }
+   ],
+   "energitiltak": {
+    "navn": "Ladeanlegg og to elektriske lastebiler",
+    "beskrivelse": "Første steg mot nullutslippsflåte: to elektriske distribusjonsbiler med lading på depotet erstatter diesel.",
+    "investering": 4800000,
+    "enovaStotte": 1400000,
+    "besparelseAndel": 0,
+    "annenBesparelsePerAar": 480000,
+    "co2TonnPerAar": 62
+   },
+   "klimakrav": "Dagligvaregrossisten krever nullutslippskjøretøy for halve flåten innen 2028 i nytt anbud."
   },
   {
    "id": "fyllingsdalen-bakeri",
@@ -6199,6 +6316,23 @@
     "driftsinntekter": 11200000,
     "aarsresultat": 520000,
     "egenkapital": 2600000
+   },
+   "tekster": [
+    {
+     "type": "epost",
+     "dato": "2026-10-01",
+     "avsender": "Liv Johannessen, Fyllingsdalen Bakeri",
+     "tittel": "Energi",
+     "tekst": "Hei. Strømregningen har blitt en av de største kostnadene våre. Vi vurderer varmegjenvinning på ovnene. Har dere grønne lån, og vet du om Enova gir støtte?",
+     "id": "fyllingsdalen-bakeri-t1"
+    }
+   ],
+   "energitiltak": {
+    "navn": "Varmegjenvinning på ovnene",
+    "beskrivelse": "Spillvarme fra ovnene gjenvinnes til oppvarming og varmtvann. Styring av ovnene etter produksjonsplan.",
+    "investering": 900000,
+    "enovaStotte": 200000,
+    "besparelseAndel": 0.35
    }
   },
   {
@@ -6947,7 +7081,8 @@
     "driftsinntekter": 9800000,
     "aarsresultat": 640000,
     "egenkapital": 3100000
-   }
+   },
+   "tekster": []
   },
   {
    "id": "kronstad-it",
@@ -7715,7 +7850,16 @@
     "driftsinntekter": 27100000,
     "aarsresultat": 3400000,
     "egenkapital": 8800000
-   }
+   },
+   "tekster": [
+    {
+     "type": "nyhet",
+     "dato": "2026-09-25",
+     "avsender": "Digi.no (simulert)",
+     "tekst": "Kronstad IT-Consult vinner ny rammeavtale med offentlig etat. Avtalen er fornyet til 2028 med opsjon på forlengelse.",
+     "id": "kronstad-it-t1"
+    }
+   ]
   },
   {
    "id": "fana-tannklinikk",
@@ -8471,7 +8615,8 @@
     "driftsinntekter": 9900000,
     "aarsresultat": 1150000,
     "egenkapital": 3700000
-   }
+   },
+   "tekster": []
   },
   {
    "id": "minde-eiendomsservice",
@@ -9227,7 +9372,8 @@
     "driftsinntekter": 8600000,
     "aarsresultat": 470000,
     "egenkapital": 1900000
-   }
+   },
+   "tekster": []
   },
   {
    "id": "paradis-frisor",
@@ -9978,7 +10124,8 @@
     "driftsinntekter": 3100000,
     "aarsresultat": 95000,
     "egenkapital": 210000
-   }
+   },
+   "tekster": []
   },
   {
    "id": "nordnes-sjomat",
@@ -10768,6 +10915,23 @@
     "driftsinntekter": 33500000,
     "aarsresultat": 720000,
     "egenkapital": 3900000
+   },
+   "tekster": [
+    {
+     "type": "nyhet",
+     "dato": "2026-10-05",
+     "avsender": "Fiskeribladet (simulert)",
+     "tittel": "Strengere importkontroll i Polen",
+     "tekst": "Polen innfører strengere importkontroll på sjømat fra 1. desember. Eksportører må regne med lengre ventetid i tollen.",
+     "id": "nordnes-sjomat-t1"
+    }
+   ],
+   "energitiltak": {
+    "navn": "Oppgradering av kjølelageret",
+    "beskrivelse": "Ny isolasjon, frekvensstyrte kompressorer og varmegjenvinning fra kjøleanlegget.",
+    "investering": 1200000,
+    "enovaStotte": 250000,
+    "besparelseAndel": 0.25
    }
   }
  ]

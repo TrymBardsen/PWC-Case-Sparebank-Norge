@@ -67,6 +67,25 @@ export interface Notat {
   tekst: string;
 }
 
+export interface Tekstkilde {
+  id: string;
+  type: "notat" | "epost" | "nyhet" | "kunngjoring";
+  dato: string;
+  avsender: string;
+  tittel?: string;
+  tekst: string;
+}
+
+export interface Energitiltak {
+  navn: string;
+  beskrivelse: string;
+  investering: number;
+  enovaStotte: number; // anslag
+  besparelseAndel: number; // andel av strømforbruket som spares
+  annenBesparelsePerAar?: number; // f.eks. spart diesel minus strøm til lading
+  co2TonnPerAar?: number; // når besparelsen ikke er strøm (f.eks. diesel)
+}
+
 export interface Restanser {
   mva: number;
   forskuddstrekkOgAga: number;
@@ -114,6 +133,13 @@ export interface Kunde {
   sisteKontakt: string;
   notater: Notat[];
   regnskapIFjor: { driftsinntekter: number; aarsresultat: number; egenkapital: number };
+
+  // Ustrukturert tekst: e-post fra kunden, nyheter og kunngjøringer (simulert i demoen)
+  tekster: Tekstkilde[];
+
+  // Grønn omstilling
+  energitiltak?: Energitiltak;
+  klimakrav?: string; // krav fra kunder eller regulering, f.eks. CSRD
 }
 
 export interface Portefolje {

@@ -30,6 +30,8 @@ export interface PrognoseValg {
   innfordringDager: number; // dager til forfalte fakturaer er innbetalt
   factoringForskudd: number; // andel av fakturabeløpet som utbetales straks
   mvaAvtaleMnd: number; // antall måneder MVA-forfallet deles på
+  energitiltak: boolean; // grønn investering finansiert med grønt lån og Enova-støtte
+  energiBesparelse: number; // andel av strømforbruket som spares (overstyrer kundens anslag når > 0)
   kostnadskutt: number; // 0.1 = -10 % variable kostnader fra uke 3
   kapitaltilskudd: number; // innskudd fra eier
 }
@@ -48,6 +50,8 @@ export const STANDARDVALG: PrognoseValg = {
   innfordringDager: 7,
   factoringForskudd: 0.8,
   mvaAvtaleMnd: 3,
+  energitiltak: false,
+  energiBesparelse: 0,
   kostnadskutt: 0,
   kapitaltilskudd: 0,
 };
@@ -115,6 +119,9 @@ const ANDEL_KONTANT_NAR_RESKONTRO = 0.2;
 const HALVERINGSTID_UKER = 3;
 const TRENDDEMPING = 0.8;
 const Z80 = 1.2816;
+export const GRONN_RENTE = 0.059; // grønt lån, rabattert rente
+export const GRONN_LOPETID_AAR = 15; // tilpasset levetiden til tiltaket
+export const NETTLEIE_OG_AVGIFT = 0.45; // kr/kWh i tillegg til spotpris (forenklet)
 
 // Standard normalfordeling (Abramowitz–Stegun)
 function phi(x: number): number {
@@ -320,6 +327,32 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
       }
     }
   }
+  // Energitiltak: grønt lån dekker investeringen minus Enova-støtten, og banken mellomfinansierer
+  // støtten til den utbetales. Likviditetsnøytralt ved oppstart, så besparelse mot lånetermin.
+  const energi = kunde.energitiltak;
+  if (valg.energitiltak && energi) {
+    const lanebelop = energi.investering - energi.enovaStotte;
+    const oppstart = leggTilDager(start, 14);
+    leggTil(oppstart, { navn: `Investering: ${energi.navn}`, belop: -energi.investering, kategori: "tiltak" });
+    leggTil(oppstart, { navn: `Grønt lån (${GRONN_LOPETID_AAR} år)`, belop: lanebelop, kategori: "tiltak" });
+    leggTil(oppstart, { navn: "Mellomfinansiering av Enova-støtte", belop: energi.enovaStotte, kategori: "tiltak" });
+    const andel = valg.energiBesparelse > 0 ? valg.energiBesparelse : energi.besparelseAndel;
+    for (let iso = leggTilDager(start, 15); iso < slutt; iso = leggTilDager(iso, 1)) {
+      const dag = tilDato(iso).getUTCDate();
+      if (dag === 20) {
+        const termin = lanebelop / (GRONN_LOPETID_AAR * 12) + (lanebelop * (GRONN_RENTE + valg.renteTillegg)) / 12;
+        leggTil(iso, { navn: "Grønt lån: termin", belop: -termin, kategori: "lan" });
+      }
+      if (dag === 15 && iso >= leggTilDager(start, 45)) {
+        if (andel > 0) {
+          const kwh = kunde.faste.stromKwhPerMnd * andel;
+          leggTil(iso, { navn: "Spart strøm (energitiltak)", belop: (kunde.faste.stromPerMnd / kunde.faste.stromKwhPerMnd) * valg.stromFaktor * kwh + kwh * NETTLEIE_OG_AVGIFT, kategori: "tiltak" });
+        }
+        if (energi.annenBesparelsePerAar) leggTil(iso, { navn: "Spart drivstoff og vedlikehold", belop: energi.annenBesparelsePerAar / 12, kategori: "tiltak" });
+      }
+    }
+  }
+
   if (valg.kapitaltilskudd > 0) {
     leggTil(leggTilDager(start, 14), { navn: "Kapitaltilskudd fra eier", belop: valg.kapitaltilskudd, kategori: "tiltak" });
   }

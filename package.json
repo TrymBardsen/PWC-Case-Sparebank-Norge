@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "data": "node scripts/generer-data.ts",
-    "sjekk": "node scripts/sjekk.ts"
+    "sjekk": "node scripts/sjekk.ts",
+    "tekstsignaler": "node --env-file-if-exists=.env.local scripts/tekstsignaler.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.134.0",

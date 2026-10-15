@@ -9,6 +9,8 @@ import { kr, mnok, omUker, prosent, tusen } from "@/lib/format";
 import { PrognoseGraf, Risikostripe } from "./PrognoseGraf";
 import { TiltakGraf, type TiltakRad } from "./TiltakGraf";
 import { Kort } from "./ui";
+import { GronnKort } from "./GronnKort";
+import { vurderGronn } from "@/lib/gronn";
 
 interface Scenario {
   id: keyof PrognoseValg;
@@ -111,6 +113,7 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
   ];
 
   const under = prognose.margin < 0;
+  const gronn = useMemo(() => vurderGronn(kunde, strompris, scenario), [kunde, strompris, scenario]);
 
   return (
     <div className="space-y-6">
@@ -210,6 +213,10 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
           </div>
         </Kort>
       </div>
+
+      {gronn && (
+        <GronnKort g={gronn} klimakrav={kunde.klimakrav} aktiv={valgte.includes("energitiltak")} onVis={() => veksleTiltak("energitiltak")} />
+      )}
 
       <Kort
         tittel="Effekt av tiltak: margin til insolvensgrensen på det laveste punktet"

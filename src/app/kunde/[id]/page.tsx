@@ -8,10 +8,11 @@ import { KildeTag, Kort, SamtykkeMerke, ScoreMerke, Utnyttelse } from "@/compone
 import { KundePrognose } from "@/components/KundePrognose";
 import { AiBrief } from "@/components/AiBrief";
 import { Oppfolging } from "@/components/Oppfolging";
+import { TekstSignaler } from "@/components/TekstSignaler";
+import { alleTekster } from "@/lib/tekst";
 
-export function generateStaticParams() {
-  return portefolje.kunder.map((k) => ({ id: k.id }));
-}
+// Dynamisk, så lagrede tekstanalyser slår inn i scoren med en gang
+export const dynamic = "force-dynamic";
 
 export default async function Kundeside({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -88,6 +89,7 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
               </table>
             </Kort>
           )}
+          <TekstSignaler kundeId={kunde.id} kilder={alleTekster(kunde)} analyse={v.tekstanalyse} debitorer={kunde.debitorer} />
           <AiBrief kundeId={kunde.id} />
         </div>
 

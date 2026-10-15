@@ -6,8 +6,9 @@ import { DAGENS_DATO, dagerMellom, kortDato } from "./dato.ts";
 import { lagPrognose, oppsummerPoster, type Prognose } from "./prognose.ts";
 import { BRANSJERISIKO } from "./sesong.ts";
 import { kr, mnok, omUker, prosent } from "./format.ts";
+import { KATEGORI_TEKST, regelbasertAnalyse, tekstpoeng, type Tekstanalyse } from "./tekst.ts";
 
-export type Kilde = "Prognose" | "Bankdata" | "Regnskapssystem" | "Tredjepart (simulert)" | "Bransje" | "CRM";
+export type Kilde = "Prognose" | "Bankdata" | "Regnskapssystem" | "Tredjepart (simulert)" | "Bransje" | "CRM" | "Tekstanalyse";
 
 export interface Faktor {
   id: string;
@@ -29,6 +30,7 @@ export interface Vurdering {
   prognose: Prognose;
   saldoEndringUke: number;
   kkUtnyttelse: number; // nå, 0–1+
+  tekstanalyse: Tekstanalyse;
 }
 
 export interface Smitte {
@@ -40,8 +42,11 @@ export interface Smitte {
 
 // Banken ser betalingsstrømmene mellom egne kunder. Når én kunde sliter,
 // løftes underleverandørene som er avhengige av den.
-export function vurderPortefolje(kunder: Kunde[]): { vurderinger: Map<string, Vurdering>; smitte: Smitte[] } {
-  const vurderinger = new Map(kunder.map((k) => [k.id, vurder(k)]));
+export function vurderPortefolje(
+  kunder: Kunde[],
+  analyseFor: (k: Kunde) => Tekstanalyse = regelbasertAnalyse,
+): { vurderinger: Map<string, Vurdering>; smitte: Smitte[] } {
+  const vurderinger = new Map(kunder.map((k) => [k.id, vurder(k, analyseFor(k))]));
   const smitte: Smitte[] = [];
   for (const k of kunder) {
     for (const d of k.debitorer) {
@@ -75,7 +80,7 @@ export function nivaFor(score: number): Niva {
   return "Lav";
 }
 
-export function vurder(kunde: Kunde): Vurdering {
+export function vurder(kunde: Kunde, tekstanalyse: Tekstanalyse = regelbasertAnalyse(kunde)): Vurdering {
   const prognose = lagPrognose(kunde);
   const ramme = kunde.kassekredittRamme;
   const saldoer = kunde.dagligSaldo.map((d) => d.saldo);
@@ -248,13 +253,28 @@ export function vurder(kunde: Kunde): Vurdering {
     });
   }
 
-  // 12. Bransje
+  // 12. Signaler i tekst (notater, e-post, nyheter)
+  {
+    const { poeng, viktigste } = tekstpoeng(kunde, tekstanalyse);
+    f.push({
+      id: "tekst",
+      navn: "Signaler i tekst",
+      poeng,
+      maks: 15,
+      forklaring: viktigste
+        ? `${KATEGORI_TEKST[viktigste.kategori]}${viktigste.gjelderDebitor ? ` (${viktigste.gjelderDebitor})` : ""}: «${viktigste.sitat}»`
+        : "Ingen negative signaler i notater, e-post eller nyheter siste 120 dager.",
+      kilde: "Tekstanalyse",
+    });
+  }
+
+  // 13. Bransje
   {
     const r = BRANSJERISIKO[kunde.bransje];
     f.push({ id: "bransje", navn: "Bransjerisiko", poeng: r === "høy" ? 4 : r === "middels" ? 2 : 0, maks: 4, forklaring: `${kunde.bransje}: ${r} konkursrate (SSB).`, kilde: "Bransje" });
   }
 
-  // 13. Glemte kunder
+  // 14. Glemte kunder
   {
     const d = dagerMellom(kunde.sisteKontakt, DAGENS_DATO);
     f.push({ id: "kontakt", navn: "Dager siden siste kontakt", poeng: d > 120 ? 4 : d > 60 ? 2 : 0, maks: 4, forklaring: `Sist kontaktet for ${d} dager siden.`, kilde: "CRM" });
@@ -269,5 +289,6 @@ export function vurder(kunde: Kunde): Vurdering {
     prognose,
     saldoEndringUke,
     kkUtnyttelse: ramme > 0 ? Math.max(0, -saldoer[saldoer.length - 1]) / ramme : 0,
+    tekstanalyse,
   };
 }
