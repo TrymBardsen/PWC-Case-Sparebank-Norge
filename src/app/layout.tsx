@@ -1,54 +1,68 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { hentMakro } from "@/lib/makro";
 import { langDato } from "@/lib/dato";
-import { portefolje } from "@/lib/data";
+import { hentVurderinger, portefolje } from "@/lib/data";
+import { Faner } from "@/components/Faner";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Likviditetsradar",
+  title: "Likviditetsradaren",
   description: "Tidligvarsling av likviditetsskvis for rådgivere i bedriftsmarkedet",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const makro = await hentMakro();
+  // «Kundeanalyse» åpner kunden som trenger rådgiveren mest
+  const { vurderinger } = hentVurderinger();
+  const toppKunde = [...vurderinger.values()].sort((a, b) => b.score - a.score)[0]?.kundeId;
+
   return (
     <html lang="nb">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
-        <header className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 gap-y-2 px-6 py-3">
-            <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-              <span className="grid h-7 w-7 place-items-center rounded-md bg-teal-700 text-sm text-white">◎</span>
-              Likviditetsradar
+      <body className={`${inter.variable} ${geistMono.variable} min-h-screen antialiased`}>
+        <header className="border-b-[3px] border-snb-rod bg-white">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-6 pt-5 pb-3">
+            <Link href="/" className="flex items-center gap-5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/sparebanken-norge-logo.png" alt="Sparebanken Norge" width={200} height={40} className="h-10 w-auto" />
+              <span className="h-10 w-px bg-slate-200" />
+              <span>
+                <span className="block font-overskrift text-2xl leading-tight font-bold text-snb-rod italic">Likviditetsradaren</span>
+                <span className="block text-xs text-slate-600">Bedriftsmarked · Rådgiverens arbeidsflate</span>
+              </span>
             </Link>
-            <nav className="flex gap-5 text-sm text-slate-600">
-              <Link href="/" className="hover:text-slate-900">Portefølje</Link>
-              <Link href="/sok" className="hover:text-slate-900">Søk i Enhetsregisteret</Link>
-              <Link href="/om" className="hover:text-slate-900">Om løsningen</Link>
-            </nav>
-            <div className="ml-auto flex flex-wrap items-center gap-4 text-xs text-slate-500">
+            <div className="ml-auto flex flex-wrap items-center gap-4 text-xs text-slate-600">
               <span title={`Norges Bank, ${makro.styringsrenteDato}`}>
                 Styringsrente <b className="tall text-slate-800">{makro.styringsrente.toFixed(2).replace(".", ",")} %</b>
-                {makro.live.rente && <span className="ml-1 text-emerald-600">●</span>}
+                {makro.live.rente && <span className="ml-1 text-snb-gronn">●</span>}
               </span>
               <span title={`hvakosterstrommen.no, snitt ${makro.stromDato}`}>
                 Strøm NO5 <b className="tall text-slate-800">{makro.stromNO5.toFixed(2).replace(".", ",")} kr/kWh</b>
-                {makro.live.strom && <span className="ml-1 text-emerald-600">●</span>}
-              </span>
-              <span className="rounded bg-slate-100 px-2 py-1">
-                {portefolje.radgiver} · BM Bergen · {langDato(portefolje.dagensDato)}
+                {makro.live.strom && <span className="ml-1 text-snb-gronn">●</span>}
               </span>
             </div>
           </div>
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-6 pb-4 text-sm text-slate-600">
+            <span className="rounded-full bg-snb-rod-lys px-3 py-1 text-xs font-semibold text-snb-rod">Prototype · fiktive data</span>
+            <span>
+              {portefolje.radgiver}, bedriftsrådgiver · BM Bergen · {langDato(portefolje.dagensDato)}
+            </span>
+          </div>
         </header>
-        <div className="border-b border-amber-200 bg-amber-50 px-6 py-1.5 text-center text-xs text-amber-900">
-          Demo: fiktiv kundebase (kundedata.json) og syntetiske bankdata (tilleggsdata.json). Konkursstatistikk (SSB), Enhetsregisteret, styringsrente og strømpris er ekte, åpne data.
-        </div>
-        <main className="mx-auto max-w-7xl px-6 py-6">{children}</main>
+
+        <main className="mx-auto max-w-7xl px-6 py-6">
+          <Faner toppKunde={toppKunde} />
+          <div className="mt-6">{children}</div>
+        </main>
+
+        <footer className="mx-auto max-w-7xl border-t border-slate-200 px-6 py-5 text-xs text-slate-500">
+          Konseptprototype. Kundene (kundedata.json) og bankdataene (tilleggsdata.json) er fiktive og syntetiske. Konkursstatistikk (SSB), Enhetsregisteret,
+          styringsrente og strømpris er ekte, åpne data.
+        </footer>
       </body>
     </html>
   );

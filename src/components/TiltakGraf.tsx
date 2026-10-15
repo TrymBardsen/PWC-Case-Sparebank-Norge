@@ -17,7 +17,7 @@ export function TiltakGraf({ rader }: { rader: TiltakRad[] }) {
   const steg = [50_000, 100_000, 250_000, 500_000, 1_000_000].find((s) => storst / s <= 3) ?? 2_000_000;
   const maks = Math.ceil((storst * 1.15) / steg) * steg;
   const ticks = Array.from({ length: (2 * maks) / steg + 1 }, (_, i) => -maks + i * steg);
-  const farge = (r: TiltakRad) => (r.margin < 0 ? FARGE.kritisk : r.type === "pakke" || r.type === "valgt" ? FARGE.prognose : "#5eaaa3");
+  const farge = (r: TiltakRad) => (r.margin < 0 ? FARGE.kritisk : r.type === "pakke" || r.type === "valgt" ? FARGE.prognose : "#2e8b7a");
 
   return (
     <div style={{ height: 36 + rader.length * 30 }} className="w-full">

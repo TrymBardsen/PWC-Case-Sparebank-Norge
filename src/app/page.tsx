@@ -2,7 +2,7 @@ import Link from "next/link";
 import { hentVurderinger, portefolje } from "@/lib/data";
 import { dagerSiden, kortDato } from "@/lib/dato";
 import { kr, mnok, omUker, prosent } from "@/lib/format";
-import { Kort, SamtykkeMerke, ScoreMerke, Utnyttelse } from "@/components/ui";
+import { AiBoks, Kort, Nokkeltall, SamtykkeMerke, ScoreMerke, Utnyttelse } from "@/components/ui";
 import { hentMakro } from "@/lib/makro";
 import { vurderGronn, type GronnVurdering } from "@/lib/gronn";
 import { lagAgenda } from "@/lib/agenda";
@@ -40,32 +40,49 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
       <Agenda oppgaver={agenda} radgiver={portefolje.radgiver} />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-        <Nokkeltall tittel="Kritisk" verdi={kritiske} farge="text-red-600" />
-        <Nokkeltall tittel="Høy prioritet" verdi={hoye} farge="text-orange-500" />
-        <Nokkeltall tittel="Passerer insolvensgrensen innen 8 uker" verdi={tomInnen8} />
-        <Nokkeltall tittel="Ikke kontaktet siste år" verdi={glemte} />
+        <Nokkeltall tittel="Kritisk" verdi={kritiske} under="Score 50 eller høyere" />
+        <Nokkeltall tittel="Høy prioritet" verdi={hoye} under="Score 30–49" />
+        <Nokkeltall tittel="Skvis innen 8 uker" verdi={tomInnen8} under="Passerer insolvensgrensen" />
+        <Nokkeltall tittel="Ikke kontaktet siste år" verdi={glemte} under={`Av ${rader.length} kunder`} />
         <Nokkeltall tittel="Kassekreditt brukt" verdi={`${Math.round((totalBrukt / totalRamme) * 100)} %`} under={`${mnok(totalBrukt)} av ${mnok(totalRamme)}`} />
       </div>
 
+      <AiBoks etikett="Ukens oppsummering:">
+        {(() => {
+          const kritiskeNavn = rader.filter((r) => r.v.niva === "Kritisk").map((r) => r.k.navn);
+          const motpart = rader.filter((r) => r.k.motpart).map((r) => r.k.navn);
+          const sensitive = rader.filter((r) => r.k.sensitiv).map((r) => r.k.navn);
+          return [
+            kritiskeNavn.length ? `${kritiskeNavn.length} kunder er kritiske, og ${kritiskeNavn[0]} har høyest risiko og bør kontaktes i dag.` : "Ingen kunder er kritiske nå.",
+            motpart.length ? `${motpart.join(" og ")} er avhengige av en motpart som har fått betalingsanmerkning.` : "",
+            sensitive.length ? `${sensitive.join(" og ")} er i en sensitiv situasjon og er tatt ut av agendaen.` : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+        })()}
+      </AiBoks>
+
       <Kort
-        tittel={`Prioriteringsliste · ${visAlle ? `alle ${rader.length}` : `topp ${Math.min(30, rader.length)} av ${rader.length}`} kunder`}
+        overtittel={`Sortert etter risikoscore · ${visAlle ? `alle ${rader.length}` : `topp ${Math.min(30, rader.length)} av ${rader.length}`} kunder`}
+        tittel="Varsler i porteføljen"
         hoyre={
-          <Link href={visAlle ? "/" : "/?alle=1"} className="text-xs text-teal-700 hover:underline">
+          <Link href={visAlle ? "/" : "/?alle=1"} className="text-sm font-semibold text-snb-rod hover:underline">
             {visAlle ? "Vis bare de 30 viktigste" : `Vis alle ${rader.length}`}
           </Link>
         }
       >
-        <div className="-mx-5 overflow-x-auto">
+        <div className="-mx-6 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs font-medium text-slate-500">
-                <th className="py-2 pl-5 pr-3">Score</th>
-                <th className="px-3">Kunde</th>
-                <th className="px-3">Hvorfor</th>
-                <th className="px-3">Insolvensgrense</th>
-                <th className="px-3">Kassekreditt</th>
-                <th className="px-3">Siste kontakt</th>
-                <th className="px-3 pr-5">Datagrunnlag</th>
+              <tr className="bg-snb-gronn text-left text-[13px] font-semibold text-white">
+                <th className="py-3 pl-6 pr-3">Kunde</th>
+                <th className="px-3 py-3">Risikoscore</th>
+                <th className="px-3 py-3">Tid til skvis</th>
+                <th className="px-3 py-3">Viktigste signal</th>
+                <th className="px-3 py-3">Kassekreditt</th>
+                <th className="px-3 py-3">Siste kontakt</th>
+                <th className="px-3 py-3">Data</th>
+                <th className="py-3 pr-6 pl-3" />
               </tr>
             </thead>
             <tbody>
@@ -73,22 +90,42 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
                 const toppFaktorer = [...v.faktorer].filter((f) => f.poeng > 0).sort((a, b) => b.poeng - a.poeng).slice(0, 2);
                 const dager = dagerSiden(k.sisteKontakt);
                 return (
-                  <tr key={k.id} className="group border-b border-slate-100 align-top last:border-0 hover:bg-slate-50">
-                    <td className="py-3 pl-5 pr-3">
-                      <ScoreMerke score={v.score} niva={v.niva} />
-                    </td>
-                    <td className="px-3 py-3">
-                      <Link href={`/kunde/${k.id}`} className="font-medium text-slate-900 group-hover:text-teal-700 group-hover:underline">
+                  <tr key={k.id} className="group border-b border-slate-200 align-top last:border-0 even:bg-snb-gra/60 hover:bg-snb-gra">
+                    <td className="py-4 pl-6 pr-3">
+                      <Link href={`/kunde/${k.id}`} className="font-overskrift text-[15px] font-bold text-slate-900 group-hover:text-snb-rod">
                         {k.navn}
                       </Link>
-                      <div className="text-xs text-slate-500">{k.bransje}{k.sesongbedrift ? " · sesongbedrift" : ""}</div>
+                      <div className="text-xs text-slate-500">
+                        {k.bransje} · {k.adresse}
+                        {k.sesongbedrift ? " · sesongbedrift" : ""}
+                      </div>
                       {k.sensitiv && (
-                        <div className="mt-1 inline-block rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-800 ring-1 ring-violet-200 ring-inset" title={k.sensitiv}>
+                        <div className="mt-1 inline-block rounded-full bg-snb-gronn-lys px-2 py-0.5 text-[10px] font-semibold text-snb-gronn" title={k.sensitiv}>
                           Sensitiv situasjon – kun praktisk kontakt
                         </div>
                       )}
                     </td>
-                    <td className="max-w-md px-3 py-3 text-xs text-slate-700">
+                    <td className="px-3 py-4">
+                      <ScoreMerke score={v.score} niva={v.niva} />
+                    </td>
+                    <td className="tall px-3 py-4 whitespace-nowrap">
+                      {v.prognose.tomKasseDato ? (
+                        <span className={v.prognose.ukerTilTomKasse! <= 2 ? "font-semibold text-snb-rod" : "font-medium text-red-700"}>
+                          {omUker(v.prognose.ukerTilTomKasse!)}
+                          <span className="block text-xs font-normal text-slate-500">
+                            {kortDato(v.prognose.tomKasseDato)} · {prosent(v.prognose.sannsynlighetInsolvens)}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-500">
+                          13+ uker
+                          {v.prognose.sannsynlighetInsolvens >= 0.1 && (
+                            <span className="block text-xs text-red-700">{prosent(v.prognose.sannsynlighetInsolvens)} sannsynlighet</span>
+                          )}
+                        </span>
+                      )}
+                    </td>
+                    <td className="max-w-sm px-3 py-4 text-[13px] text-slate-700">
                       {toppFaktorer.length ? (
                         <ul className="space-y-0.5">
                           {toppFaktorer.map((f) => (
@@ -99,31 +136,19 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
                         <span className="text-slate-400">Ingen signaler</span>
                       )}
                     </td>
-                    <td className="tall px-3 py-3 whitespace-nowrap">
-                      {v.prognose.tomKasseDato ? (
-                        <span className={v.prognose.ukerTilTomKasse! <= 2 ? "font-semibold text-red-600" : "font-medium text-orange-600"}>
-                          {kortDato(v.prognose.tomKasseDato)}
-                          <span className="block text-xs font-normal text-slate-500">
-                            {omUker(v.prognose.ukerTilTomKasse!)} · {prosent(v.prognose.sannsynlighetInsolvens)}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">
-                          –
-                          {v.prognose.sannsynlighetInsolvens >= 0.1 && (
-                            <span className="block text-xs text-amber-700">{prosent(v.prognose.sannsynlighetInsolvens)} sannsynlighet</span>
-                          )}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-4">
                       <Utnyttelse andel={v.kkUtnyttelse} />
                     </td>
-                    <td className={`tall px-3 py-3 text-xs whitespace-nowrap ${dager === null || dager > 365 ? "font-medium text-orange-600" : "text-slate-600"}`}>
+                    <td className={`tall px-3 py-4 text-xs whitespace-nowrap ${dager === null || dager > 365 ? "font-semibold text-red-700" : "text-slate-600"}`}>
                       {dager === null ? "Ingen registrert" : `${dager} dager siden`}
                     </td>
-                    <td className="px-3 py-3 pr-5">
+                    <td className="px-3 py-4">
                       <SamtykkeMerke niva={k.samtykke} />
+                    </td>
+                    <td className="py-4 pr-6 pl-3 text-right">
+                      <Link href={`/kunde/${k.id}`} className="font-semibold whitespace-nowrap text-snb-rod hover:underline">
+                        Åpne →
+                      </Link>
                     </td>
                   </tr>
                 );
@@ -271,16 +296,6 @@ function UtenAi({ kunder, kritiske }: { kunder: Kunde[]; kritiske: { navn: strin
           </table>
         </Kort>
       </div>
-    </div>
-  );
-}
-
-function Nokkeltall({ tittel, verdi, farge = "text-slate-900", under }: { tittel: string; verdi: number | string; farge?: string; under?: string }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <div className="text-xs text-slate-500">{tittel}</div>
-      <div className={`tall text-2xl font-semibold ${farge}`}>{verdi}</div>
-      {under && <div className="text-xs text-slate-500">{under}</div>}
     </div>
   );
 }

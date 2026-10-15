@@ -1,23 +1,104 @@
 @import "tailwindcss";
 
+/* Sparebanken Norge-profil. Paletten legges inn som Tailwind-farger, slik at
+   eksisterende klasser (teal = grønn, red = rød, slate = nøytral) får bankens farger. */
 :root {
-  --background: #f6f7f9;
-  --foreground: #14181f;
+  --background: #ffffff;
+  --foreground: #333333;
+  --snb-rod: #ff4238;
+  --snb-rod-mork: #d9362d;
+  --snb-rod-lys: #fff4f3;
+  --snb-gronn: #006858;
+  --snb-gronn-mid: #2e8b7a;
+  --snb-gronn-lys: #edf7f5;
+  --snb-gra: #f7f7f7;
+  --snb-linje: #e0e0e0;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter), "Diatype", "Inter", -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-geist-mono);
+  --font-overskrift: Arial, Helvetica, sans-serif;
+
+  --color-snb-rod: var(--snb-rod);
+  --color-snb-rod-mork: var(--snb-rod-mork);
+  --color-snb-rod-lys: var(--snb-rod-lys);
+  --color-snb-gronn: var(--snb-gronn);
+  --color-snb-gronn-mid: var(--snb-gronn-mid);
+  --color-snb-gronn-lys: var(--snb-gronn-lys);
+  --color-snb-gra: var(--snb-gra);
+  --color-snb-linje: var(--snb-linje);
+}
+
+@theme {
+  /* Grønn (aksent, positive tall, tabellhoder) */
+  --color-teal-50: #edf7f5;
+  --color-teal-100: #d6eee9;
+  --color-teal-200: #b3ddd4;
+  --color-teal-300: #86c7b9;
+  --color-teal-400: #4fa897;
+  --color-teal-500: #2e8b7a;
+  --color-teal-600: #2e8b7a;
+  --color-teal-700: #006858;
+  --color-teal-800: #00574a;
+  --color-teal-900: #00463c;
+  --color-teal-950: #00302a;
+  --color-emerald-50: #edf7f5;
+  --color-emerald-200: #b3ddd4;
+  --color-emerald-600: #2e8b7a;
+  --color-emerald-700: #006858;
+  --color-emerald-800: #00574a;
+  --color-emerald-900: #00463c;
+
+  /* Rød (primærfarge, risiko) */
+  --color-red-50: #fff4f3;
+  --color-red-100: #ffe3e1;
+  --color-red-200: #ffc9c5;
+  --color-red-300: #ffa29b;
+  --color-red-500: #ff4238;
+  --color-red-600: #ff4238;
+  --color-red-700: #d9362d;
+  --color-red-800: #b32a22;
+  --color-red-900: #8c2019;
+  --color-red-950: #5a1511;
+
+  /* Nøytral */
+  --color-slate-50: #f7f7f7;
+  --color-slate-100: #f0f0f0;
+  --color-slate-200: #e0e0e0;
+  --color-slate-300: #cfcfcf;
+  --color-slate-400: #a3a09a;
+  --color-slate-500: #85817a;
+  --color-slate-600: #666666;
+  --color-slate-700: #4d4d4d;
+  --color-slate-800: #333333;
+  --color-slate-900: #1b1a18;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-inter), "Diatype", "Inter", -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Overskrifter i bankens stil: Arial, fet, rød */
+h1,
+h2,
+h3 {
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .tall {
   font-variant-numeric: tabular-nums;
+}
+
+/* Liten grønn overtittel over seksjoner («KUNDEANALYSE») */
+.overtittel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--snb-gronn);
 }

@@ -14,10 +14,10 @@ interface Punkt {
 }
 
 export const FARGE = {
-  prognose: "#0f766e",
-  historikk: "#475569",
-  sammenlign: "#94a3b8",
-  kritisk: "#dc2626",
+  prognose: "#006858",
+  historikk: "#333333",
+  sammenlign: "#a3a09a",
+  kritisk: "#ff4238",
   varsel: "#d97706",
 };
 
@@ -120,7 +120,7 @@ export function Risikostripe({ prognose }: { prognose: Prognose }) {
               key={u.nr}
               title={`Uke fra ${kortDato(u.fra)}: ${Math.round(p * 100)} %`}
               className="tall rounded-sm py-1 text-center text-[10px] font-medium"
-              style={{ background: `rgba(220, 38, 38, ${0.06 + p * 0.85})`, color: p > 0.45 ? "#fff" : "#475569" }}
+              style={{ background: `rgba(255, 66, 56, ${0.06 + p * 0.85})`, color: p > 0.45 ? "#fff" : "#475569" }}
             >
               {Math.round(p * 100)} %
             </div>

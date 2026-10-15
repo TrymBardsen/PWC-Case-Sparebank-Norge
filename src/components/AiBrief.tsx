@@ -44,7 +44,7 @@ export function AiBrief({ kundeId }: { kundeId: string }) {
           <button
             onClick={hent}
             disabled={laster}
-            className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-60"
+            className="rounded-md bg-snb-rod px-5 py-2.5 text-sm font-semibold text-white hover:bg-snb-rod-mork disabled:opacity-60"
           >
             {laster ? "Forbereder …" : "Forbered samtale"}
           </button>

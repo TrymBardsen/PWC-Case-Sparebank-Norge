@@ -30,16 +30,14 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/" className="text-xs text-slate-500 hover:text-slate-800">
-          ← Portefølje
-        </Link>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight">{kunde.navn}</h1>
-              <ScoreMerke score={v.score} niva={v.niva} stor />
+            <div className="overtittel mb-1">Kundeanalyse</div>
+            <h1 className="font-overskrift text-3xl font-bold text-snb-rod">{kunde.navn}</h1>
+            <div className="mt-2 flex items-center gap-3 text-sm text-slate-600">
+              Risikoscore <ScoreMerke score={v.score} niva={v.niva} stor />
             </div>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600">
               {kunde.naceKode} · {kunde.ansatte} ansatte · etablert {kunde.etablert} · daglig leder {kunde.dagligLeder}
             </p>
             <p className="text-xs text-slate-500">
@@ -51,7 +49,7 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
               egenkapitalandel {prosent(kunde.regnskapIFjor.egenkapitalAndel)}
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-3 rounded-lg border border-slate-200 bg-white px-5 py-4 text-sm sm:grid-cols-4">
             <Info tittel="Kassekreditt" verdi={mnok(kunde.kassekredittRamme)}>
               <Utnyttelse andel={v.kkUtnyttelse} />
             </Info>
@@ -76,7 +74,7 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
         <div className="space-y-6 xl:col-span-2">
           <KundePrognose kunde={kunde} strompris={makro.stromNO5} />
           {kunde.fakturaer && kunde.fakturaer.length > 0 && (
-            <Kort tittel="Utestående fakturaer (reskontro)" hoyre={<KildeTag kilde="Regnskapssystem" />}>
+            <Kort overtittel="Regnskapssystem" tittel="Utestående fakturaer" hoyre={<KildeTag kilde="Regnskapssystem" />}>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
@@ -109,7 +107,7 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
         </div>
 
         <div className="space-y-6">
-          <Kort tittel="Hvorfor er kunden flagget?" hoyre={<span className="tall text-xs text-slate-500">{v.score} av 100 poeng</span>}>
+          <Kort overtittel="Forklarbar AI" tittel="Signaler bak varselet" hoyre={<span className="tall text-xs text-slate-500">{v.score} av 100 poeng</span>}>
             <ul className="space-y-3">
               {faktorer.map((f) => (
                 <li key={f.id} className={f.poeng === 0 && !f.ukjent ? "opacity-45" : ""}>
@@ -131,7 +129,7 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
             </ul>
           </Kort>
 
-          <Kort tittel="Datagrunnlag og samtykke" hoyre={<SamtykkeMerke niva={kunde.samtykke} />}>
+          <Kort overtittel="Personvern" tittel="Datagrunnlag og samtykke" hoyre={<SamtykkeMerke niva={kunde.samtykke} />}>
             <ul className="space-y-2 text-sm">
               <Datanivå pa tittel="1 · Bankdata og offentlige data" tekst="Konto og transaksjoner, kassekreditt, lån, sikkerheter, avviste betalinger, registerhendelser og SSB." />
               <Datanivå
@@ -149,7 +147,7 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
           </Kort>
 
           {(eksponerte.length > 0 || avhengigAv.length > 0) && (
-            <Kort tittel="Nettverk i porteføljen" hoyre={<KildeTag kilde="Bankdata" />}>
+            <Kort overtittel="Verdikjede" tittel="Nettverk i porteføljen" hoyre={<KildeTag kilde="Bankdata" />}>
               <ul className="space-y-2 text-sm">
                 {eksponerte.map((s) => (
                   <li key={s.til}>
@@ -172,7 +170,7 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
             </Kort>
           )}
 
-          <Kort tittel="Kundens kunder" hoyre={<KildeTag kilde="Bankdata" />}>
+          <Kort overtittel="Betalere" tittel="Kundens kunder" hoyre={<KildeTag kilde="Bankdata" />}>
             <ul className="space-y-1.5 text-sm">
               {kunde.debitorer.map((d) => (
                 <li key={d.navn} className="flex items-center justify-between gap-2">
@@ -200,8 +198,8 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
 function Info({ tittel, verdi, children }: { tittel: string; verdi: string; children?: React.ReactNode }) {
   return (
     <div>
-      <div className="text-xs text-slate-500">{tittel}</div>
-      <div className="tall font-medium">{verdi}</div>
+      <div className="text-[11px] font-semibold tracking-wide text-slate-600 uppercase">{tittel}</div>
+      <div className="tall font-overskrift text-lg font-bold text-slate-900">{verdi}</div>
       {children}
     </div>
   );

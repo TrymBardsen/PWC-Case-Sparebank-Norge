@@ -82,7 +82,8 @@ export function Agenda({ oppgaver, radgiver }: { oppgaver: Oppgave[]; radgiver: 
 
   return (
     <Kort
-      tittel={`Dagens agenda · ${oppgaver.length} oppgaver`}
+      overtittel={`${oppgaver.length} oppgaver i dag`}
+      tittel="Dagens agenda"
       hoyre={
         <span className="text-right text-xs text-slate-500">
           Forberedelse ca. <b className="text-teal-700">{tid(med)}</b> i stedet for ca. {tid(uten)}
@@ -124,8 +125,8 @@ export function Agenda({ oppgaver, radgiver }: { oppgaver: Oppgave[]; radgiver: 
                       Send melding
                     </Knapp>
                     <Knapp onClick={() => setBooker(booker === o.id ? null : o.id)}>Book møte</Knapp>
-                    <Link href={`/kunde/${o.kundeId}`} className="rounded-md px-2 py-1 text-teal-700 hover:underline">
-                      Åpne
+                    <Link href={`/kunde/${o.kundeId}`} className="rounded-md px-2 py-1 font-semibold whitespace-nowrap text-snb-rod hover:underline">
+                      Åpne →
                     </Link>
                   </span>
                 )}
@@ -189,7 +190,7 @@ function Knapp({ children, onClick, primar }: { children: React.ReactNode; onCli
   return (
     <button
       onClick={onClick}
-      className={`rounded-md px-2.5 py-1 font-medium ${primar ? "bg-teal-700 text-white hover:bg-teal-800" : "border border-slate-200 text-slate-700 hover:border-slate-300"}`}
+      className={`rounded-md px-3 py-1.5 font-semibold ${primar ? "bg-snb-rod text-white hover:bg-snb-rod-mork" : "border border-slate-200 bg-white text-slate-700 hover:border-slate-400"}`}
     >
       {children}
     </button>
