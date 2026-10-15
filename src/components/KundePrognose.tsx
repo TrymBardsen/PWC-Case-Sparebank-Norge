@@ -20,7 +20,9 @@ interface Scenario {
   tilValg: (verdi: number) => number;
 }
 
-export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: number }) {
+// mote: visning for kunden i møtet. Ingen interne vurderinger (anbefalt pakke, betalingslettelse,
+// bankens forbehold) og nøytrale ord («kassekredittrammen» i stedet for «insolvensgrensen»).
+export function KundePrognose({ kunde, strompris, mote = false }: { kunde: Kunde; strompris: number; mote?: boolean }) {
   const [scenarioPa, setScenarioPa] = useState<string[]>([]);
   const [scenarioVerdier, setScenarioVerdier] = useState<Parametre>({});
   const [parametre, setParametre] = useState<Parametre>({});
@@ -108,7 +110,7 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
     ...(aktiveTiltak.length > 1 && !pakkeErValgt
       ? [{ navn: "Din kombinasjon", margin: prognose.margin, sannsynlighet: prognose.sannsynlighetInsolvens, type: "valgt" } as TiltakRad]
       : []),
-    ...(pakke && pakke.tiltak.length > 1
+    ...(pakke && pakke.tiltak.length > 1 && !mote
       ? [{ navn: "Anbefalt pakke", margin: pakke.prognose.margin, sannsynlighet: pakke.prognose.sannsynlighetInsolvens, type: "pakke" } as TiltakRad]
       : []),
   ];
@@ -122,31 +124,33 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
         overtittel="Saldo inkl. trekkramme"
         tittel="Likviditetsprognose neste 13 uker"
         hoyre={
-          <button onClick={() => setVisMetode((v) => !v)} className="text-sm font-semibold text-snb-rod hover:underline">
-            {visMetode ? "Skjul metode" : "Slik er prognosen laget"}
-          </button>
+          !mote && (
+            <button onClick={() => setVisMetode((v) => !v)} className="text-sm font-semibold text-snb-rod hover:underline">
+              {visMetode ? "Skjul metode" : "Slik er prognosen laget"}
+            </button>
+          )
         }
       >
-        {visMetode && <Metodeboks kunde={kunde} prognose={prognose} />}
+        {visMetode && !mote && <Metodeboks kunde={kunde} prognose={prognose} />}
 
         <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Tall
-            tittel="Insolvensgrense"
-            verdi={mnok(-prognose.ramme)}
-            under={valg.rammeokning ? `inkl. +${mnok(valg.rammeokning)} midlertidig ramme` : "kassekreditten brukt opp"}
+            tittel={mote ? "Kassekredittramme" : "Insolvensgrense"}
+            verdi={mnok(mote ? prognose.ramme : -prognose.ramme)}
+            under={valg.rammeokning ? `inkl. +${mnok(valg.rammeokning)} midlertidig ramme` : mote ? `saldoen kan ikke gå under ${mnok(-prognose.ramme)}` : "kassekreditten brukt opp"}
             farge="text-red-600"
           />
           <Tall
-            tittel="Grensen passeres"
+            tittel={mote ? "Rammen strekker ikke til" : "Grensen passeres"}
             verdi={prognose.tomKasseDato ? kortDato(prognose.tomKasseDato) : "Nei"}
             under={prognose.tomKasseDato ? `${omUker(prognose.ukerTilTomKasse!)} · ${prognose.dagerUnderGrensen} dager under` : "ikke i forventet forløp"}
             farge={prognose.tomKasseDato ? "text-red-600" : "text-emerald-700"}
             sammenlign={sammenlign ? `${sammenlignNavn}: ${sammenlign.tomKasseDato ? kortDato(sammenlign.tomKasseDato) : "nei"}` : undefined}
           />
           <Tall
-            tittel="Sannsynlighet for insolvens"
+            tittel={mote ? "Sannsynlighet" : "Sannsynlighet for insolvens"}
             verdi={prosent(prognose.sannsynlighetInsolvens)}
-            under="for å havne under grensen i perioden"
+            under={mote ? "for at rammen ikke strekker til i perioden" : "for å havne under grensen i perioden"}
             farge={prognose.sannsynlighetInsolvens >= 0.5 ? "text-red-600" : prognose.sannsynlighetInsolvens >= 0.2 ? "text-amber-600" : "text-emerald-700"}
             sammenlign={sammenlign ? `${sammenlignNavn}: ${prosent(sammenlign.sannsynlighetInsolvens)}` : undefined}
           />
@@ -161,16 +165,16 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
           />
         </div>
 
-        <PrognoseGraf historikk={kunde.dagligSaldo} prognose={prognose} sammenlign={sammenlign} sammenlignNavn={sammenlignNavn} />
+        <PrognoseGraf historikk={kunde.dagligSaldo} prognose={prognose} sammenlign={sammenlign} sammenlignNavn={sammenlignNavn} grenseNavn={mote ? "Kassekredittramme" : "Insolvensgrense"} />
         <div className="mt-2 mb-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
           <Forklaring stil={{ background: "#475569" }} tekst="Faktisk saldo" />
           <Forklaring stil={{ background: "#0f766e" }} tekst={aktiveTiltak.length ? "Prognose med tiltak" : "Prognose"} />
           {sammenlign && <Forklaring stil={{ borderTop: "2px dashed #94a3b8", height: 0 }} tekst={sammenlignNavn} />}
           <Forklaring stil={{ background: "rgba(15,118,110,0.15)", height: 10 }} tekst="80 %-intervall" />
           <Forklaring stil={{ background: "rgba(217,119,6,0.18)", height: 10 }} tekst="Varselsone (over 90 % av rammen)" />
-          <Forklaring stil={{ background: "rgba(220,38,38,0.15)", height: 10 }} tekst="Betalingsudyktig: kan ikke betale forfalte krav" />
+          <Forklaring stil={{ background: "rgba(220,38,38,0.15)", height: 10 }} tekst={mote ? "Under rammen: regninger kan ikke betales" : "Betalingsudyktig: kan ikke betale forfalte krav"} />
         </div>
-        <Risikostripe prognose={prognose} />
+        <Risikostripe prognose={prognose} grenseNavn={mote ? "kassekredittrammen" : "insolvensgrensen"} />
       </Kort>
 
       <div className="space-y-6">
@@ -192,7 +196,7 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
 
         <Kort
           overtittel={`${alleTiltak.length} mulige tiltak · velg for å simulere`}
-          tittel="Tiltak mot mislighold"
+          tittel={mote ? "Mulige tiltak" : "Tiltak mot mislighold"}
           hoyre={
             valgte.length > 0 && (
               <button onClick={() => setValgte([])} className="text-sm font-semibold text-snb-rod hover:underline">
@@ -201,13 +205,18 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
             )
           }
         >
-          <Anbefaling vurdering={vurdering} pakkeErValgt={pakkeErValgt} onBruk={() => setValgte(pakke ? pakke.tiltak.map((t) => t.id) : [])} />
+          {mote ? (
+            <p className="text-sm text-slate-600">Slå på ett eller flere tiltak for å se hvordan de påvirker saldoen i grafen over.</p>
+          ) : (
+            <Anbefaling vurdering={vurdering} pakkeErValgt={pakkeErValgt} onBruk={() => setValgte(pakke ? pakke.tiltak.map((t) => t.id) : [])} />
+          )}
           <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
             {alleTiltak.map((t) => (
               <TiltakKnapp
                 key={t.id}
                 tiltak={t}
                 pa={valgte.includes(t.id)}
+                mote={mote}
                 forbedring={effektFor(t.id)?.forbedring}
                 onClick={() => veksleTiltak(t.id)}
                 onEndre={(v) => setParametre((p) => ({ ...p, [t.id]: v }))}
@@ -222,13 +231,13 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
       )}
 
       <Kort
-        overtittel="Margin til insolvensgrensen på det laveste punktet"
+        overtittel={`Margin til ${mote ? "kassekredittrammen" : "insolvensgrensen"} på det laveste punktet`}
         tittel="Effekt av tiltak"
         hoyre={<span className="text-xs text-slate-500">Hvert tiltak alene{scenarioAktiv ? ", gitt valgt scenario" : ""}</span>}
       >
-        <TiltakGraf rader={rader} />
+        <TiltakGraf rader={rader} grenseNavn={mote ? "Kassekredittramme" : "Insolvensgrense"} />
         <p className="mt-2 text-xs text-slate-500">
-          Søyler til venstre for streken betyr at kunden fortsatt blir betalingsudyktig. Tiltak som bare flytter betalinger i tid (f.eks. innfordring) kan hjelpe
+          {mote ? "Søyler til venstre for streken betyr at rammen fortsatt ikke strekker til." : "Søyler til venstre for streken betyr at kunden fortsatt blir betalingsudyktig."} Tiltak som bare flytter betalinger i tid (f.eks. innfordring) kan hjelpe
           tidlig i perioden uten å endre det laveste punktet.
         </p>
       </Kort>
@@ -336,12 +345,14 @@ const AKTOR_STIL: Record<string, string> = {
 function TiltakKnapp({
   tiltak,
   pa,
+  mote,
   forbedring,
   onClick,
   onEndre,
 }: {
   tiltak: Tiltak;
   pa: boolean;
+  mote: boolean;
   forbedring?: number;
   onClick: () => void;
   onEndre: (verdi: number) => void;
@@ -355,7 +366,7 @@ function TiltakKnapp({
       aria-disabled={av}
       onClick={() => !av && onClick()}
       onKeyDown={(e) => !av && (e.key === "Enter" || e.key === " ") && e.target === e.currentTarget && (e.preventDefault(), onClick())}
-      title={tiltak.forbehold}
+      title={mote ? undefined : tiltak.forbehold}
       className={`flex w-full items-start gap-3 rounded-lg border px-3 py-2 text-left transition ${
         av ? "cursor-not-allowed border-slate-100 opacity-50" : pa ? "cursor-pointer border-teal-600 bg-teal-50" : "cursor-pointer border-slate-200 hover:border-slate-300"
       }`}
@@ -365,7 +376,7 @@ function TiltakKnapp({
         <span className="flex flex-wrap items-center gap-1.5">
           <span className="text-sm font-medium text-slate-900">{tiltak.navn}</span>
           <span className={`rounded px-1.5 text-[10px] font-medium ring-1 ring-inset ${AKTOR_STIL[tiltak.aktor]}`}>{tiltak.aktor}</span>
-          {tiltak.betalingslettelse && (
+          {tiltak.betalingslettelse && !mote && (
             <span className="rounded bg-orange-50 px-1.5 text-[10px] font-medium text-orange-800 ring-1 ring-orange-200 ring-inset">Betalingslettelse</span>
           )}
         </span>

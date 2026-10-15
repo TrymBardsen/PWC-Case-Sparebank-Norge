@@ -26,11 +26,13 @@ export function PrognoseGraf({
   prognose,
   sammenlign,
   sammenlignNavn = "Uten tiltak",
+  grenseNavn = "Insolvensgrense",
 }: {
   historikk: { dato: string; saldo: number }[];
   prognose: Prognose;
   sammenlign?: Prognose;
   sammenlignNavn?: string;
+  grenseNavn?: string;
 }) {
   const punkter: Punkt[] = historikk.slice(-42).map((d) => ({ dato: d.dato, historikk: d.saldo }));
   const siste = punkter[punkter.length - 1];
@@ -84,7 +86,7 @@ export function PrognoseGraf({
             stroke={FARGE.kritisk}
             strokeWidth={1.5}
             strokeDasharray="6 4"
-            label={{ value: `Insolvensgrense ${mnok(grense)}`, position: "insideBottomRight", fontSize: 11, fill: FARGE.kritisk, fontWeight: 600 }}
+            label={{ value: `${grenseNavn} ${mnok(grense)}`, position: "insideBottomRight", fontSize: 11, fill: FARGE.kritisk, fontWeight: 600 }}
           />
           <ReferenceLine x={idag} stroke="#94a3b8" strokeDasharray="2 3" label={{ value: "I dag", position: "insideTopRight", fontSize: 11, fill: "#64748b" }} />
           <Line dataKey="historikk" name="Saldo (faktisk)" stroke={FARGE.historikk} strokeWidth={1.5} dot={false} isAnimationActive={false} />
@@ -108,10 +110,10 @@ export function PrognoseGraf({
 }
 
 // Sannsynlighet for å være under insolvensgrensen, uke for uke
-export function Risikostripe({ prognose }: { prognose: Prognose }) {
+export function Risikostripe({ prognose, grenseNavn = "insolvensgrensen" }: { prognose: Prognose; grenseNavn?: string }) {
   return (
     <div>
-      <div className="mb-1 text-xs text-slate-500">Sannsynlighet for å være under insolvensgrensen, per uke</div>
+      <div className="mb-1 text-xs text-slate-500">Sannsynlighet for å være under {grenseNavn}, per uke</div>
       <div className="grid grid-cols-13 gap-0.5" style={{ gridTemplateColumns: "repeat(13, minmax(0, 1fr))" }}>
         {prognose.uker.map((u) => {
           const p = u.sannsynlighet;

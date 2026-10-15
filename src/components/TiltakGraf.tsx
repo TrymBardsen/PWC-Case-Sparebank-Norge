@@ -12,7 +12,7 @@ export interface TiltakRad {
 }
 
 // Margin til insolvensgrensen på det laveste punktet. 0 = grensen.
-export function TiltakGraf({ rader }: { rader: TiltakRad[] }) {
+export function TiltakGraf({ rader, grenseNavn = "Insolvensgrense" }: { rader: TiltakRad[]; grenseNavn?: string }) {
   const storst = Math.max(...rader.map((r) => Math.abs(r.margin)), 100_000);
   const steg = [50_000, 100_000, 250_000, 500_000, 1_000_000].find((s) => storst / s <= 3) ?? 2_000_000;
   const maks = Math.ceil((storst * 1.15) / steg) * steg;
@@ -41,7 +41,7 @@ export function TiltakGraf({ rader }: { rader: TiltakRad[] }) {
             }}
             contentStyle={{ fontSize: 12, borderRadius: 8 }}
           />
-          <ReferenceLine x={0} stroke={FARGE.kritisk} strokeWidth={1.5} strokeDasharray="6 4" label={{ value: "Insolvensgrense", position: "top", fontSize: 11, fill: FARGE.kritisk }} />
+          <ReferenceLine x={0} stroke={FARGE.kritisk} strokeWidth={1.5} strokeDasharray="6 4" label={{ value: grenseNavn, position: "top", fontSize: 11, fill: FARGE.kritisk }} />
           <Bar dataKey="margin" radius={4} isAnimationActive={false} maxBarSize={18}>
             {rader.map((r) => (
               <Cell key={r.navn} fill={farge(r)} />

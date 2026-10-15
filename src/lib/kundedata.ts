@@ -64,7 +64,7 @@ export interface Tilleggsdata {
   betalarar: Record<string, { namn: string; type: string; andel_2026_pst: number }[]>;
   lan: { kunde_id: string; produkt: string; objekt: string | null; saldo_knok: number; rente_pst: number; avdrag_per_termin_knok: number; sluttdato: string; sluttbetaling_knok: number; forfalne_terminar: number; forfalt_belop_knok: number }[];
   sikkerheiter: { kunde_id: string; verdi_knok: number }[];
-  avviste_betalingar: { kunde_id: string; dato: string }[];
+  avviste_betalingar: { kunde_id: string; dato: string; belop_knok: number }[];
   samtykke: Record<string, { rekneskapsdata: boolean; system: string | null }>;
   reskontro: Record<
     string,
@@ -209,7 +209,8 @@ export function byggPortefolje(kd: Kundedata, td: Tilleggsdata): Portefolje {
       .filter((h) => !h.kjelde.startsWith("Møtenotat") && h.kjelde !== "Bank (CRM)")
       .map((h) => ({ id: h.hending_id, type: hendingstype(h.kjelde), dato: h.dato, avsender: h.kjelde, tittel: h.kategori, tekst: h.sitat ? `${h.hending} «${h.sitat}»` : h.hending }));
 
-    const avviste = td.avviste_betalingar.filter((a) => a.kunde_id === id && dagarMellom(a.dato, perDato) <= 90).length;
+    const avvisteListe = td.avviste_betalingar.filter((a) => a.kunde_id === id).map((a) => ({ dato: a.dato, belop: a.belop_knok * KNOK }));
+    const avviste = avvisteListe.filter((a) => dagarMellom(a.dato, perDato) <= 90).length;
     const sesongprofil = sesongFra(historikk);
     const strom = faste.stromPerMnd * 12;
 
@@ -243,6 +244,7 @@ export function byggPortefolje(kd: Kundedata, td: Tilleggsdata): Portefolje {
       historikk,
       dagligSaldo,
       avvisteBetalinger90d: avviste,
+      avvisteBetalinger: avvisteListe,
       debitorer,
       fakturaer: reskontro?.kundefordringar.map((f, i) => ({ id: `${id}-f${i + 1}`, debitor: f.debitor, belop: f.belop_knok * KNOK, fakturadato: f.fakturadato, forfall: f.forfall })),
       forfaltLeverandorgjeld: reskontro ? reskontro.leverandorgjeld_forfalt_knok * KNOK : undefined,

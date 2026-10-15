@@ -22,7 +22,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="nb">
       <body className={`${inter.variable} ${geistMono.variable} min-h-screen antialiased`}>
-        <header className="border-b-[3px] border-snb-rod bg-white print:hidden">
+        <header data-skjul-i-mote className="border-b-[3px] border-snb-rod bg-white print:hidden">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-6 pt-5 pb-3">
             <Link href="/" className="flex items-center gap-5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -43,11 +43,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </header>
 
         <main className="mx-auto max-w-7xl px-6 py-6 print:max-w-none print:p-0">
-          <Faner toppKunde={toppKunde} />
+          <div data-skjul-i-mote>
+            <Faner toppKunde={toppKunde} />
+          </div>
           <div className="mt-6 print:mt-0">{children}</div>
         </main>
 
-        <footer className="mx-auto max-w-7xl border-t border-slate-200 px-6 py-5 text-xs text-slate-500 print:hidden">
+        <footer data-skjul-i-mote className="mx-auto max-w-7xl border-t border-slate-200 px-6 py-5 text-xs text-slate-500 print:hidden">
           Konseptprototype. Kundene (kundedata.json) og bankdataene (tilleggsdata.json) er fiktive og syntetiske. Konkursstatistikk (SSB), Enhetsregisteret,
           styringsrente og strømpris er ekte, åpne data.
         </footer>

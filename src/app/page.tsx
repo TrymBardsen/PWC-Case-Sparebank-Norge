@@ -8,6 +8,8 @@ import { vurderGronn, type GronnVurdering } from "@/lib/gronn";
 import { lagAgenda } from "@/lib/agenda";
 import { Agenda } from "@/components/Agenda";
 import { PortefoljeModus } from "@/components/PortefoljeModus";
+import { NyttSidenSist } from "@/components/NyttSidenSist";
+import { Minigraf } from "@/components/Minigraf";
 import type { Kunde } from "@/lib/types";
 
 // Dynamisk, så lagrede tekstanalyser slår inn i scoren med en gang
@@ -47,6 +49,8 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
         <Nokkeltall tittel="Kassekreditt brukt" verdi={`${Math.round((totalBrukt / totalRamme) * 100)} %`} under={`${mnok(totalBrukt)} av ${mnok(totalRamme)}`} />
       </div>
 
+      <NyttSidenSist kunder={portefolje.kunder} vurderinger={vurderinger} />
+
       <AiBoks etikett="Ukens oppsummering:">
         {(() => {
           const kritiskeNavn = rader.filter((r) => r.v.niva === "Kritisk").map((r) => r.k.navn);
@@ -77,6 +81,10 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
               <tr className="bg-snb-gronn text-left text-[13px] font-semibold text-white">
                 <th className="py-3 pl-6 pr-3">Kunde</th>
                 <th className="px-3 py-3">Risikoscore</th>
+                <th className="px-3 py-3">
+                  Saldo
+                  <span className="block text-[11px] font-normal opacity-80">90 dager + prognose</span>
+                </th>
                 <th className="px-3 py-3">Tid til skvis</th>
                 <th className="px-3 py-3">Viktigste signal</th>
                 <th className="px-3 py-3">Kassekreditt</th>
@@ -107,6 +115,9 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
                     </td>
                     <td className="px-3 py-4">
                       <ScoreMerke score={v.score} niva={v.niva} />
+                    </td>
+                    <td className="px-3 py-3">
+                      <Minigraf historikk={k.dagligSaldo} prognose={v.prognose} />
                     </td>
                     <td className="tall px-3 py-4 whitespace-nowrap">
                       {v.prognose.tomKasseDato ? (

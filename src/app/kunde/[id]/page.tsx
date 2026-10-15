@@ -10,6 +10,7 @@ import { AiBrief } from "@/components/AiBrief";
 import { Oppfolging } from "@/components/Oppfolging";
 import { TekstSignaler } from "@/components/TekstSignaler";
 import { alleTekster } from "@/lib/tekst";
+import { ScoreForklaring } from "@/components/ScoreForklaring";
 
 // Dynamisk, så lagrede tekstanalyser slår inn i scoren med en gang
 export const dynamic = "force-dynamic";
@@ -63,7 +64,13 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
               >
                 Lag møterapport med KI →
               </Link>
-              <span className="ml-3 text-xs text-slate-500">Én side med kildehenvisninger, før kundemøtet</span>
+              <Link
+                href={`/kunde/${kunde.id}/mote`}
+                className="ml-2 inline-flex items-center gap-2 rounded-md border border-snb-rod px-4 py-2 text-sm font-semibold text-snb-rod hover:bg-snb-rod-lys"
+              >
+                Møtemodus
+              </Link>
+              <span className="mt-1 block text-xs text-slate-500">Møterapport før møtet · møtemodus viser prognose og tiltak til kunden, uten interne vurderinger</span>
             </div>
           </div>
         </div>
@@ -117,6 +124,7 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
 
         <div className="space-y-6">
           <Kort overtittel="Forklarbar AI" tittel="Signaler bak varselet" hoyre={<span className="tall text-xs text-slate-500">{v.score} av 100 poeng</span>}>
+            <ScoreForklaring faktorer={v.faktorer} score={v.score} />
             <ul className="space-y-3">
               {faktorer.map((f) => (
                 <li key={f.id} className={f.poeng === 0 && !f.ukjent ? "opacity-45" : ""}>

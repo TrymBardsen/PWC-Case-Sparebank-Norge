@@ -132,6 +132,7 @@ export interface Kunde {
   historikk: Uke[]; // 104 uker bakover
   dagligSaldo: DagSaldo[]; // 365 dager bakover
   avvisteBetalinger90d: number;
+  avvisteBetalinger: { dato: string; belop: number }[];
   debitorer: Debitor[];
 
   // Krever samtykke nivå 2
