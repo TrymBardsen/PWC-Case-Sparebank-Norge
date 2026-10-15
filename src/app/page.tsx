@@ -2,7 +2,7 @@ import Link from "next/link";
 import { hentVurderinger, portefolje } from "@/lib/data";
 import { dagerSiden, kortDato } from "@/lib/dato";
 import { kr, mnok, omUker, prosent } from "@/lib/format";
-import { AiBoks, Kort, Nokkeltall, SamtykkeMerke, ScoreMerke, Utnyttelse } from "@/components/ui";
+import { AiBoks, Kort, NivaPille, Nokkeltall, SamtykkeMerke, Utnyttelse } from "@/components/ui";
 import { hentMakro } from "@/lib/makro";
 import { vurderGronn, type GronnVurdering } from "@/lib/gronn";
 import { lagAgenda } from "@/lib/agenda";
@@ -89,8 +89,7 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
                 <th className="px-3 py-3">Viktigste signal</th>
                 <th className="px-3 py-3">Kassekreditt</th>
                 <th className="px-3 py-3">Siste kontakt</th>
-                <th className="px-3 py-3">Data</th>
-                <th className="py-3 pr-6 pl-3" />
+                <th className="py-3 pr-6 pl-3">Data</th>
               </tr>
             </thead>
             <tbody>
@@ -99,7 +98,7 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
                 const dager = dagerSiden(k.sisteKontakt);
                 return (
                   <tr key={k.id} className="group border-b border-slate-200 align-top last:border-0 even:bg-snb-gra/60 hover:bg-snb-gra">
-                    <td className="py-4 pl-6 pr-3">
+                    <td className="min-w-56 py-4 pl-6 pr-3">
                       <Link href={`/kunde/${k.id}`} className="font-overskrift text-[15px] font-bold text-slate-900 group-hover:text-snb-rod">
                         {k.navn}
                       </Link>
@@ -114,7 +113,10 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
                       )}
                     </td>
                     <td className="px-3 py-4">
-                      <ScoreMerke score={v.score} niva={v.niva} />
+                      <span className="flex items-center gap-2 whitespace-nowrap">
+                        <span className="tall w-6 text-right font-overskrift text-base font-bold text-slate-900">{v.score}</span>
+                        <NivaPille niva={v.niva} />
+                      </span>
                     </td>
                     <td className="px-3 py-3">
                       <Minigraf historikk={k.dagligSaldo} prognose={v.prognose} />
@@ -136,30 +138,26 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
                         </span>
                       )}
                     </td>
-                    <td className="max-w-sm px-3 py-4 text-[13px] text-slate-700">
+                    <td className="px-3 py-4 text-[13px] text-slate-700">
                       {toppFaktorer.length ? (
-                        <ul className="space-y-0.5">
-                          {toppFaktorer.map((f) => (
-                            <li key={f.id}>{f.forklaring}</li>
-                          ))}
-                        </ul>
+                        <>
+                          <span className="line-clamp-2" title={toppFaktorer[0].forklaring}>
+                            {toppFaktorer[0].forklaring}
+                          </span>
+                          {toppFaktorer[1] && <span className="mt-0.5 block text-xs text-slate-500">Også: {toppFaktorer[1].navn.toLowerCase()}</span>}
+                        </>
                       ) : (
                         <span className="text-slate-400">Ingen signaler</span>
                       )}
                     </td>
-                    <td className="px-3 py-4">
+                    <td className="px-3 py-4 whitespace-nowrap">
                       <Utnyttelse andel={v.kkUtnyttelse} />
                     </td>
                     <td className={`tall px-3 py-4 text-xs whitespace-nowrap ${dager === null || dager > 365 ? "font-semibold text-red-700" : "text-slate-600"}`}>
                       {dager === null ? "Ingen registrert" : `${dager} dager siden`}
                     </td>
-                    <td className="px-3 py-4">
+                    <td className="py-4 pr-6 pl-3 whitespace-nowrap">
                       <SamtykkeMerke niva={k.samtykke} />
-                    </td>
-                    <td className="py-4 pr-6 pl-3 text-right">
-                      <Link href={`/kunde/${k.id}`} className="font-semibold whitespace-nowrap text-snb-rod hover:underline">
-                        Åpne →
-                      </Link>
                     </td>
                   </tr>
                 );
