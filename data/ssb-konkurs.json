@@ -1,0 +1,1100 @@
+{
+  "kjelde": "SSB, tabell 10790 (åpnede foretakskonkurser) og 07091 (bedrifter etter næring)",
+  "henta": "2026-10-15",
+  "oppdatert_ssb": "2026-07-23T06:00:00Z",
+  "kvartal_siste_4": [
+    "2025K3",
+    "2025K4",
+    "2026K1",
+    "2026K2"
+  ],
+  "kvartal_forrige_4": [
+    "2024K3",
+    "2024K4",
+    "2025K1",
+    "2025K2"
+  ],
+  "bedrifter_aar": "2026",
+  "merknad": "Foretakskonkurser (ekskl. enkeltpersonforetak). Rate per 1000 bedrifter er en tilnærming: bedrifter (virksomheter) brukes som nevner fordi foretak per næring ikke finnes i samme tabell.",
+  "naeringar_2siffer": {
+    "10": {
+      "namn": "Produksjon av nærings- og nytelsesmidler",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 36,
+        "konkursar_forrige_4_kvartal": 24,
+        "endring_pst": 50,
+        "bedrifter": 3449,
+        "konkursar_per_1000_bedrifter": 10.4
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 1,
+        "konkursar_forrige_4_kvartal": 2,
+        "endring_pst": -50,
+        "bedrifter": 397,
+        "konkursar_per_1000_bedrifter": 2.5
+      }
+    },
+    "16": {
+      "namn": "Produksjon av trelast og varer av tre, kork, strå og flettematerialer, unntatt møbler",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 9,
+        "konkursar_forrige_4_kvartal": 22,
+        "endring_pst": -59,
+        "bedrifter": 1598,
+        "konkursar_per_1000_bedrifter": 5.6
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 0,
+        "konkursar_forrige_4_kvartal": 3,
+        "endring_pst": -100,
+        "bedrifter": 158,
+        "konkursar_per_1000_bedrifter": 0
+      }
+    },
+    "18": {
+      "namn": "Trykking og reproduksjon av innspilte opptak",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 10,
+        "konkursar_forrige_4_kvartal": 2,
+        "endring_pst": 400,
+        "bedrifter": 743,
+        "konkursar_per_1000_bedrifter": 13.5
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 0,
+        "konkursar_forrige_4_kvartal": 0,
+        "endring_pst": null,
+        "bedrifter": 77,
+        "konkursar_per_1000_bedrifter": 0
+      }
+    },
+    "25": {
+      "namn": "Produksjon av metallvarer, unntatt maskiner og utstyr",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 21,
+        "konkursar_forrige_4_kvartal": 24,
+        "endring_pst": -12,
+        "bedrifter": 2499,
+        "konkursar_per_1000_bedrifter": 8.4
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 2,
+        "konkursar_forrige_4_kvartal": 4,
+        "endring_pst": -50,
+        "bedrifter": 310,
+        "konkursar_per_1000_bedrifter": 6.5
+      }
+    },
+    "26": {
+      "namn": "Produksjon av datamaskiner og elektroniske og optiske produkter",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 2,
+        "konkursar_forrige_4_kvartal": 2,
+        "endring_pst": 0,
+        "bedrifter": 311,
+        "konkursar_per_1000_bedrifter": 6.4
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 0,
+        "konkursar_forrige_4_kvartal": 0,
+        "endring_pst": null,
+        "bedrifter": 25,
+        "konkursar_per_1000_bedrifter": 0
+      }
+    },
+    "33": {
+      "namn": "Reparasjon og installasjon av maskiner og utstyr",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 16,
+        "konkursar_forrige_4_kvartal": 22,
+        "endring_pst": -27,
+        "bedrifter": 4856,
+        "konkursar_per_1000_bedrifter": 3.3
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 0,
+        "konkursar_forrige_4_kvartal": 3,
+        "endring_pst": -100,
+        "bedrifter": 719,
+        "konkursar_per_1000_bedrifter": 0
+      }
+    },
+    "41": {
+      "namn": "Oppføring av bygninger",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 424,
+        "konkursar_forrige_4_kvartal": 486,
+        "endring_pst": -13,
+        "bedrifter": 27247,
+        "konkursar_per_1000_bedrifter": 15.6
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 47,
+        "konkursar_forrige_4_kvartal": 44,
+        "endring_pst": 7,
+        "bedrifter": 3355,
+        "konkursar_per_1000_bedrifter": 14
+      }
+    },
+    "43": {
+      "namn": "Spesialisert bygge- og anleggsvirksomhet",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 429,
+        "konkursar_forrige_4_kvartal": 505,
+        "endring_pst": -15,
+        "bedrifter": 39363,
+        "konkursar_per_1000_bedrifter": 10.9
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 41,
+        "konkursar_forrige_4_kvartal": 51,
+        "endring_pst": -20,
+        "bedrifter": 4521,
+        "konkursar_per_1000_bedrifter": 9.1
+      }
+    },
+    "45": {
+      "namn": "Handel med og reparasjon av motorvogner",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 104,
+        "konkursar_forrige_4_kvartal": 148,
+        "endring_pst": -30,
+        "bedrifter": 13372,
+        "konkursar_per_1000_bedrifter": 7.8
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 5,
+        "konkursar_forrige_4_kvartal": 10,
+        "endring_pst": -50,
+        "bedrifter": 1258,
+        "konkursar_per_1000_bedrifter": 4
+      }
+    },
+    "47": {
+      "namn": "Detaljhandel, unntatt salg av motorvogner",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 305,
+        "konkursar_forrige_4_kvartal": 417,
+        "endring_pst": -27,
+        "bedrifter": 38493,
+        "konkursar_per_1000_bedrifter": 7.9
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 36,
+        "konkursar_forrige_4_kvartal": 38,
+        "endring_pst": -5,
+        "bedrifter": 4317,
+        "konkursar_per_1000_bedrifter": 8.3
+      }
+    },
+    "49": {
+      "namn": "Landtransport og rørtransport",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 146,
+        "konkursar_forrige_4_kvartal": 140,
+        "endring_pst": 4,
+        "bedrifter": 18972,
+        "konkursar_per_1000_bedrifter": 7.7
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 12,
+        "konkursar_forrige_4_kvartal": 13,
+        "endring_pst": -8,
+        "bedrifter": 1934,
+        "konkursar_per_1000_bedrifter": 6.2
+      }
+    },
+    "53": {
+      "namn": "Post og distribusjonsvirksomhet",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 23,
+        "konkursar_forrige_4_kvartal": 20,
+        "endring_pst": 15,
+        "bedrifter": 4411,
+        "konkursar_per_1000_bedrifter": 5.2
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 2,
+        "konkursar_forrige_4_kvartal": 1,
+        "endring_pst": 100,
+        "bedrifter": 386,
+        "konkursar_per_1000_bedrifter": 5.2
+      }
+    },
+    "55": {
+      "namn": "Overnattingsvirksomhet",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 19,
+        "konkursar_forrige_4_kvartal": 20,
+        "endring_pst": -5,
+        "bedrifter": 4334,
+        "konkursar_per_1000_bedrifter": 4.4
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 1,
+        "konkursar_forrige_4_kvartal": 2,
+        "endring_pst": -50,
+        "bedrifter": 709,
+        "konkursar_per_1000_bedrifter": 1.4
+      }
+    },
+    "56": {
+      "namn": "Serveringsvirksomhet",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 386,
+        "konkursar_forrige_4_kvartal": 402,
+        "endring_pst": -4,
+        "bedrifter": 15215,
+        "konkursar_per_1000_bedrifter": 25.4
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 41,
+        "konkursar_forrige_4_kvartal": 41,
+        "endring_pst": 0,
+        "bedrifter": 1553,
+        "konkursar_per_1000_bedrifter": 26.4
+      }
+    },
+    "62": {
+      "namn": "Tjenester tilknyttet informasjonsteknologi",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 114,
+        "konkursar_forrige_4_kvartal": 113,
+        "endring_pst": 1,
+        "bedrifter": 18679,
+        "konkursar_per_1000_bedrifter": 6.1
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 12,
+        "konkursar_forrige_4_kvartal": 12,
+        "endring_pst": 0,
+        "bedrifter": 1668,
+        "konkursar_per_1000_bedrifter": 7.2
+      }
+    },
+    "69": {
+      "namn": "Juridisk og regnskapsmessig tjenesteyting",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 9,
+        "konkursar_forrige_4_kvartal": 14,
+        "endring_pst": -36,
+        "bedrifter": 7378,
+        "konkursar_per_1000_bedrifter": 1.2
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 0,
+        "konkursar_forrige_4_kvartal": 0,
+        "endring_pst": null,
+        "bedrifter": 741,
+        "konkursar_per_1000_bedrifter": 0
+      }
+    },
+    "71": {
+      "namn": "Arkitektvirksomhet og teknisk konsulentvirksomhet, og teknisk prøving og analyse",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 117,
+        "konkursar_forrige_4_kvartal": 139,
+        "endring_pst": -16,
+        "bedrifter": 19529,
+        "konkursar_per_1000_bedrifter": 6
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 14,
+        "konkursar_forrige_4_kvartal": 13,
+        "endring_pst": 8,
+        "bedrifter": 2391,
+        "konkursar_per_1000_bedrifter": 5.9
+      }
+    },
+    "73": {
+      "namn": "Annonse- og reklamevirksomhet og markedsundersøkelser",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 33,
+        "konkursar_forrige_4_kvartal": 42,
+        "endring_pst": -21,
+        "bedrifter": 6517,
+        "konkursar_per_1000_bedrifter": 5.1
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 4,
+        "konkursar_forrige_4_kvartal": 2,
+        "endring_pst": 100,
+        "bedrifter": 610,
+        "konkursar_per_1000_bedrifter": 6.6
+      }
+    },
+    "75": {
+      "namn": "Veterinærtjenester",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 1,
+        "konkursar_forrige_4_kvartal": 1,
+        "endring_pst": 0,
+        "bedrifter": 1737,
+        "konkursar_per_1000_bedrifter": 0.6
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 0,
+        "konkursar_forrige_4_kvartal": 0,
+        "endring_pst": null,
+        "bedrifter": 172,
+        "konkursar_per_1000_bedrifter": 0
+      }
+    },
+    "78": {
+      "namn": "Arbeidskrafttjenester",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 36,
+        "konkursar_forrige_4_kvartal": 29,
+        "endring_pst": 24,
+        "bedrifter": 3111,
+        "konkursar_per_1000_bedrifter": 11.6
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 6,
+        "konkursar_forrige_4_kvartal": 3,
+        "endring_pst": 100,
+        "bedrifter": 433,
+        "konkursar_per_1000_bedrifter": 13.9
+      }
+    },
+    "79": {
+      "namn": "Reisebyrå- og reisearrangørvirksomhet og tilknyttede tjenester",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 23,
+        "konkursar_forrige_4_kvartal": 17,
+        "endring_pst": 35,
+        "bedrifter": 3894,
+        "konkursar_per_1000_bedrifter": 5.9
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 1,
+        "konkursar_forrige_4_kvartal": 1,
+        "endring_pst": 0,
+        "bedrifter": 566,
+        "konkursar_per_1000_bedrifter": 1.8
+      }
+    },
+    "81": {
+      "namn": "Tjenester tilknyttet eiendomsdrift",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 74,
+        "konkursar_forrige_4_kvartal": 65,
+        "endring_pst": 14,
+        "bedrifter": 13000,
+        "konkursar_per_1000_bedrifter": 5.7
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 3,
+        "konkursar_forrige_4_kvartal": 4,
+        "endring_pst": -25,
+        "bedrifter": 1304,
+        "konkursar_per_1000_bedrifter": 2.3
+      }
+    },
+    "86": {
+      "namn": "Helsetjenester",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 48,
+        "konkursar_forrige_4_kvartal": 26,
+        "endring_pst": 85,
+        "bedrifter": 42823,
+        "konkursar_per_1000_bedrifter": 1.1
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 4,
+        "konkursar_forrige_4_kvartal": 4,
+        "endring_pst": 0,
+        "bedrifter": 4641,
+        "konkursar_per_1000_bedrifter": 0.9
+      }
+    },
+    "88": {
+      "namn": "Sosiale omsorgstjenester uten botilbud",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 11,
+        "konkursar_forrige_4_kvartal": 13,
+        "endring_pst": -15,
+        "bedrifter": 13172,
+        "konkursar_per_1000_bedrifter": 0.8
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 2,
+        "konkursar_forrige_4_kvartal": 2,
+        "endring_pst": 0,
+        "bedrifter": 1469,
+        "konkursar_per_1000_bedrifter": 1.4
+      }
+    },
+    "93": {
+      "namn": "Sports- og fritidsaktiviteter og drift av fornøyelsesetablissementer",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 30,
+        "konkursar_forrige_4_kvartal": 32,
+        "endring_pst": -6,
+        "bedrifter": 6073,
+        "konkursar_per_1000_bedrifter": 4.9
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 4,
+        "konkursar_forrige_4_kvartal": 4,
+        "endring_pst": 0,
+        "bedrifter": 688,
+        "konkursar_per_1000_bedrifter": 5.8
+      }
+    },
+    "96": {
+      "namn": "Annen personlig tjenesteyting",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 68,
+        "konkursar_forrige_4_kvartal": 95,
+        "endring_pst": -28,
+        "bedrifter": 18782,
+        "konkursar_per_1000_bedrifter": 3.6
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 3,
+        "konkursar_forrige_4_kvartal": 5,
+        "endring_pst": -40,
+        "bedrifter": 1990,
+        "konkursar_per_1000_bedrifter": 1.5
+      }
+    },
+    "03": {
+      "namn": "Fiske, fangst og akvakultur",
+      "Hele landet": {
+        "konkursar_siste_4_kvartal": 30,
+        "konkursar_forrige_4_kvartal": 27,
+        "endring_pst": 11,
+        "bedrifter": 7182,
+        "konkursar_per_1000_bedrifter": 4.2
+      },
+      "Vestland": {
+        "konkursar_siste_4_kvartal": 6,
+        "konkursar_forrige_4_kvartal": 4,
+        "endring_pst": 50,
+        "bedrifter": 1069,
+        "konkursar_per_1000_bedrifter": 5.6
+      }
+    }
+  },
+  "naeringar_5siffer": {
+    "03.111": {
+      "Vestland": {
+        "siste_4_kvartal": 2,
+        "forrige_4_kvartal": 3
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 16,
+        "forrige_4_kvartal": 21
+      },
+      "ssb_koder": [
+        "03.111"
+      ]
+    },
+    "03.212": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 0
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 4,
+        "forrige_4_kvartal": 0
+      },
+      "ssb_koder": [
+        "03.212"
+      ]
+    },
+    "10.200": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 0
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 4,
+        "forrige_4_kvartal": 8
+      },
+      "ssb_koder": [
+        "10.201",
+        "10.202",
+        "10.203",
+        "10.209"
+      ]
+    },
+    "10.710": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 2
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 18,
+        "forrige_4_kvartal": 7
+      },
+      "ssb_koder": [
+        "10.710"
+      ]
+    },
+    "16.230": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 2
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 5,
+        "forrige_4_kvartal": 14
+      },
+      "ssb_koder": [
+        "16.231",
+        "16.232"
+      ]
+    },
+    "18.120": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 0
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 10,
+        "forrige_4_kvartal": 2
+      },
+      "ssb_koder": [
+        "18.120"
+      ]
+    },
+    "25.620": {
+      "Vestland": {
+        "siste_4_kvartal": 1,
+        "forrige_4_kvartal": 1
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 10,
+        "forrige_4_kvartal": 10
+      },
+      "ssb_koder": [
+        "25.620"
+      ]
+    },
+    "26.510": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 0
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 1,
+        "forrige_4_kvartal": 1
+      },
+      "ssb_koder": [
+        "26.510"
+      ]
+    },
+    "33.150": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 2
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 1,
+        "forrige_4_kvartal": 11
+      },
+      "ssb_koder": [
+        "33.150"
+      ]
+    },
+    "41.200": {
+      "Vestland": {
+        "siste_4_kvartal": 35,
+        "forrige_4_kvartal": 37
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 323,
+        "forrige_4_kvartal": 378
+      },
+      "ssb_koder": [
+        "41.200"
+      ]
+    },
+    "43.210": {
+      "Vestland": {
+        "siste_4_kvartal": 3,
+        "forrige_4_kvartal": 4
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 40,
+        "forrige_4_kvartal": 34
+      },
+      "ssb_koder": [
+        "43.210"
+      ]
+    },
+    "43.220": {
+      "Vestland": {
+        "siste_4_kvartal": 12,
+        "forrige_4_kvartal": 12
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 76,
+        "forrige_4_kvartal": 84
+      },
+      "ssb_koder": [
+        "43.220",
+        "43.221",
+        "43.222",
+        "43.223"
+      ]
+    },
+    "43.221": {
+      "Vestland": {
+        "siste_4_kvartal": 10,
+        "forrige_4_kvartal": 10
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 60,
+        "forrige_4_kvartal": 70
+      },
+      "ssb_koder": [
+        "43.221"
+      ]
+    },
+    "43.320": {
+      "Vestland": {
+        "siste_4_kvartal": 4,
+        "forrige_4_kvartal": 8
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 98,
+        "forrige_4_kvartal": 138
+      },
+      "ssb_koder": [
+        "43.320"
+      ]
+    },
+    "43.340": {
+      "Vestland": {
+        "siste_4_kvartal": 3,
+        "forrige_4_kvartal": 4
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 40,
+        "forrige_4_kvartal": 53
+      },
+      "ssb_koder": [
+        "43.341",
+        "43.342"
+      ]
+    },
+    "45.112": {
+      "Vestland": {
+        "siste_4_kvartal": 1,
+        "forrige_4_kvartal": 3
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 37,
+        "forrige_4_kvartal": 51
+      },
+      "ssb_koder": [
+        "45.112"
+      ]
+    },
+    "45.200": {
+      "Vestland": {
+        "siste_4_kvartal": 3,
+        "forrige_4_kvartal": 4
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 47,
+        "forrige_4_kvartal": 55
+      },
+      "ssb_koder": [
+        "45.200"
+      ]
+    },
+    "47.110": {
+      "Vestland": {
+        "siste_4_kvartal": 5,
+        "forrige_4_kvartal": 5
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 36,
+        "forrige_4_kvartal": 42
+      },
+      "ssb_koder": [
+        "47.111",
+        "47.112"
+      ]
+    },
+    "47.521": {
+      "Vestland": {
+        "siste_4_kvartal": 1,
+        "forrige_4_kvartal": 1
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 2,
+        "forrige_4_kvartal": 3
+      },
+      "ssb_koder": [
+        "47.521"
+      ]
+    },
+    "47.591": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 0
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 12,
+        "forrige_4_kvartal": 12
+      },
+      "ssb_koder": [
+        "47.591"
+      ]
+    },
+    "47.761": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 4
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 12,
+        "forrige_4_kvartal": 22
+      },
+      "ssb_koder": [
+        "47.761"
+      ]
+    },
+    "47.782": {
+      "Vestland": {
+        "siste_4_kvartal": 1,
+        "forrige_4_kvartal": 0
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 2,
+        "forrige_4_kvartal": 4
+      },
+      "ssb_koder": [
+        "47.782"
+      ]
+    },
+    "47.910": {
+      "Vestland": {
+        "siste_4_kvartal": 3,
+        "forrige_4_kvartal": 7
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 44,
+        "forrige_4_kvartal": 75
+      },
+      "ssb_koder": [
+        "47.911",
+        "47.912",
+        "47.913",
+        "47.914",
+        "47.915",
+        "47.916",
+        "47.917",
+        "47.919"
+      ]
+    },
+    "49.320": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 1
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 29,
+        "forrige_4_kvartal": 12
+      },
+      "ssb_koder": [
+        "49.320"
+      ]
+    },
+    "49.410": {
+      "Vestland": {
+        "siste_4_kvartal": 10,
+        "forrige_4_kvartal": 11
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 102,
+        "forrige_4_kvartal": 116
+      },
+      "ssb_koder": [
+        "49.410"
+      ]
+    },
+    "53.200": {
+      "Vestland": {
+        "siste_4_kvartal": 2,
+        "forrige_4_kvartal": 1
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 23,
+        "forrige_4_kvartal": 20
+      },
+      "ssb_koder": [
+        "53.200"
+      ]
+    },
+    "55.101": {
+      "Vestland": {
+        "siste_4_kvartal": 1,
+        "forrige_4_kvartal": 2
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 15,
+        "forrige_4_kvartal": 13
+      },
+      "ssb_koder": [
+        "55.101"
+      ]
+    },
+    "56.101": {
+      "Vestland": {
+        "siste_4_kvartal": 34,
+        "forrige_4_kvartal": 35
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 285,
+        "forrige_4_kvartal": 298
+      },
+      "ssb_koder": [
+        "56.101"
+      ]
+    },
+    "56.210": {
+      "Vestland": {
+        "siste_4_kvartal": 2,
+        "forrige_4_kvartal": 2
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 28,
+        "forrige_4_kvartal": 21
+      },
+      "ssb_koder": [
+        "56.210"
+      ]
+    },
+    "62.010": {
+      "Vestland": {
+        "siste_4_kvartal": 9,
+        "forrige_4_kvartal": 8
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 71,
+        "forrige_4_kvartal": 83
+      },
+      "ssb_koder": [
+        "62.010"
+      ]
+    },
+    "69.100": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 0
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 2,
+        "forrige_4_kvartal": 5
+      },
+      "ssb_koder": [
+        "69.100"
+      ]
+    },
+    "69.201": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 0
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 7,
+        "forrige_4_kvartal": 9
+      },
+      "ssb_koder": [
+        "69.201"
+      ]
+    },
+    "71.111": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 0
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 0
+      },
+      "ssb_koder": [
+        "71.111"
+      ]
+    },
+    "71.129": {
+      "Vestland": {
+        "siste_4_kvartal": 7,
+        "forrige_4_kvartal": 8
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 66,
+        "forrige_4_kvartal": 94
+      },
+      "ssb_koder": [
+        "71.129"
+      ]
+    },
+    "73.110": {
+      "Vestland": {
+        "siste_4_kvartal": 4,
+        "forrige_4_kvartal": 2
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 33,
+        "forrige_4_kvartal": 41
+      },
+      "ssb_koder": [
+        "73.110"
+      ]
+    },
+    "75.000": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 0
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 1,
+        "forrige_4_kvartal": 1
+      },
+      "ssb_koder": [
+        "75.000"
+      ]
+    },
+    "78.200": {
+      "Vestland": {
+        "siste_4_kvartal": 5,
+        "forrige_4_kvartal": 1
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 26,
+        "forrige_4_kvartal": 20
+      },
+      "ssb_koder": [
+        "78.200"
+      ]
+    },
+    "79.900": {
+      "Vestland": {
+        "siste_4_kvartal": 1,
+        "forrige_4_kvartal": 1
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 21,
+        "forrige_4_kvartal": 15
+      },
+      "ssb_koder": [
+        "79.901",
+        "79.902",
+        "79.903",
+        "79.909"
+      ]
+    },
+    "81.100": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 2
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 19,
+        "forrige_4_kvartal": 19
+      },
+      "ssb_koder": [
+        "81.101",
+        "81.109"
+      ]
+    },
+    "81.210": {
+      "Vestland": {
+        "siste_4_kvartal": 2,
+        "forrige_4_kvartal": 2
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 42,
+        "forrige_4_kvartal": 38
+      },
+      "ssb_koder": [
+        "81.210"
+      ]
+    },
+    "86.211": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 0
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 2,
+        "forrige_4_kvartal": 3
+      },
+      "ssb_koder": [
+        "86.211"
+      ]
+    },
+    "86.230": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 2
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 5,
+        "forrige_4_kvartal": 3
+      },
+      "ssb_koder": [
+        "86.230"
+      ]
+    },
+    "86.902": {
+      "Vestland": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 0
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 0,
+        "forrige_4_kvartal": 0
+      },
+      "ssb_koder": [
+        "86.902"
+      ]
+    },
+    "88.911": {
+      "Vestland": {
+        "siste_4_kvartal": 1,
+        "forrige_4_kvartal": 0
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 2,
+        "forrige_4_kvartal": 5
+      },
+      "ssb_koder": [
+        "88.911"
+      ]
+    },
+    "93.130": {
+      "Vestland": {
+        "siste_4_kvartal": 2,
+        "forrige_4_kvartal": 2
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 6,
+        "forrige_4_kvartal": 9
+      },
+      "ssb_koder": [
+        "93.130"
+      ]
+    },
+    "96.020": {
+      "Vestland": {
+        "siste_4_kvartal": 3,
+        "forrige_4_kvartal": 4
+      },
+      "Hele landet": {
+        "siste_4_kvartal": 54,
+        "forrige_4_kvartal": 74
+      },
+      "ssb_koder": [
+        "96.020"
+      ]
+    }
+  }
+}

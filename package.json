@@ -9,7 +9,9 @@
     "lint": "eslint",
     "data": "node scripts/generer-data.ts",
     "sjekk": "node scripts/sjekk.ts",
-    "tekstsignaler": "node --env-file-if-exists=.env.local scripts/tekstsignaler.ts"
+    "tekstsignaler": "node --env-file-if-exists=.env.local scripts/tekstsignaler.ts",
+    "ssb": "node scripts/hent-ssb.ts",
+    "tilleggsdata": "node scripts/lag-tilleggsdata.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.134.0",

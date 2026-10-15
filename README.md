@@ -119,6 +119,30 @@ npm run tekstsignaler        # Tekstanalyse med Claude for alle kunder (krever A
 
 Kundeprofilene ligger i `scripts/generer-data.ts`. Demo-datoen settes i `src/lib/dato.ts`.
 
+### Nytt datagrunnlag: kundedata og tilleggsdata
+
+`data/kundedata.json` er det nye grunnlaget: 120 fiktive bedrifter i BM Bergen per 2026-10-01 (bedrifter, engasjement, kontakter og hendelser). Fasit-arket er fjernet. Appen er ennå ikke bygget om til å bruke det.
+
+`data/tilleggsdata.json` supplerer med data som en bank har i egne systemer, eller kan få med kundens samtykke:
+
+| Del | Innhold | Realistisk kilde |
+|---|---|---|
+| `konto_historikk` | Daglig saldo på driftskonto og trekk på kassekreditt, 365 dager | Bankens kjernesystem |
+| `kontantstraum` | Ukentlige inn- og utbetalinger per kategori (kunder, kort, kontant, lønn, skattetrekk/AGA, MVA, husleie, strøm, lån, leverandører), 104 uker | Bankens transaksjonsdata |
+| `betalarar` | Hvem innbetalingene kommer fra, og andel i 2026 | Bankens transaksjonsdata |
+| `lan` | Nedbetalingsplan: avdrag, termin, sluttbetaling og forfalte terminer | Bankens lånesystem |
+| `sikkerheiter` | Pant og kausjoner med verdi | Bankens sikkerhetsregister |
+| `avviste_betalingar` | Betalinger avvist på grunn av manglende dekning | Bankens betalingssystem |
+| `samtykke` og `reskontro` | Kundefordringer, forfalt leverandørgjeld og restanser for de 47 kundene som har gitt tilgang | Regnskapssystemets API (Tripletex, Fiken o.l.), kun med samtykke |
+| `ssb_konkurs` | Foretakskonkurser per næring for Vestland og hele landet, siste 8 kvartaler, og konkurser per 1000 bedrifter | **Ekte data** fra SSB (tabell 10790 og 07091) |
+
+Bankdataene er syntetiske, men konsistente med kundedata.json. Saldo i dag er lik saldo i Engasjement. Mønstrene i merknadene og hendelsene er gjenskapt: utnyttelse over 80 % per måned, overtrekk på oppgitte datoer, stående saldo over 3 og 4 millioner, kontantinnskudd og motpartsandeler på 62 % og 51 %. Kunder uten slike merknader holdes bevisst unna tersklene, så det ikke legges inn nye skjulte signaler. Innbetalinger følger årsomsetningen, og lønn følger antall ansatte.
+
+```bash
+npm run ssb           # Henter ekte konkursstatistikk fra SSB → data/ssb-konkurs.json
+npm run tilleggsdata  # Genererer data/tilleggsdata.json fra kundedata.json og SSB-dataene
+```
+
 ## Teknologi og struktur
 
 Bygget med Next.js, React, TypeScript og Recharts. Prognosen og risikoscoren er regelbaserte og beregnes i applikasjonen. Claude brukes til tekstanalyse og til et strukturert samtaleutkast når API-nøkkel er konfigurert; begge har en regelbasert reserve.
