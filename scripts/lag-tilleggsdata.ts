@@ -383,12 +383,9 @@ function simuler(b: Bedrift) {
       L[i] = L[i] * (1 - w) + maal(i) * w;
     }
   };
-  let kappa = 1; // demping av svingingane innanfor eit band
   if (kk && m.kkBand) {
     const fra = DAGAR.indexOf(m.kkBand.fra);
     const midt = (m.kkBand.min + m.kkBand.maks) / 200;
-    const halv = (m.kkBand.maks - m.kkBand.min) / 200;
-    void halv;
     overgang(fra, (i) => buffer - (midt + ((kkTrekk / ramme - midt) * Math.max(0, i - (IDAG - 30))) / 30) * ramme);
   }
   if (m.driftskontoMin) {
@@ -413,7 +410,7 @@ function simuler(b: Bedrift) {
       flyt.leverandorar[i] = Math.max(innDag * 0.05, flyt.leverandorar[i] + drift / kvardagIdx.length);
     }
   }
-  const P = L.map((l, i) => l + avvik[i] * kappa);
+  const P = L.map((l, i) => l + avvik[i]);
   // Den siste månaden glir mot dagens saldo, så siste dag er eksakt
   for (let i = IDAG - 20; i <= IDAG; i++) {
     const w = (i - (IDAG - 20)) / 20;
