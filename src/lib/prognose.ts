@@ -27,6 +27,9 @@ export interface PrognoseValg {
   kkTilLan: number; // del av kassekreditten som gjøres om til nedbetalingslån
   mvaAvtale: boolean; // betalingsavtale med Skatteetaten: MVA deles på tre måneder
   innfordring: boolean; // aktiv oppfølging av forfalte fakturaer
+  innfordringDager: number; // dager til forfalte fakturaer er innbetalt
+  factoringForskudd: number; // andel av fakturabeløpet som utbetales straks
+  mvaAvtaleMnd: number; // antall måneder MVA-forfallet deles på
   kostnadskutt: number; // 0.1 = -10 % variable kostnader fra uke 3
   kapitaltilskudd: number; // innskudd fra eier
 }
@@ -42,6 +45,9 @@ export const STANDARDVALG: PrognoseValg = {
   kkTilLan: 0,
   mvaAvtale: false,
   innfordring: false,
+  innfordringDager: 7,
+  factoringForskudd: 0.8,
+  mvaAvtaleMnd: 3,
   kostnadskutt: 0,
   kapitaltilskudd: 0,
 };
@@ -235,7 +241,7 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
     leggTil(iso, { navn: brukerReskontro && iso < blandingSlutt ? "Kontantsalg (anslag)" : "Innbetalinger (normalnivå)", belop: innDag, kategori: "salg" });
     // Løpende factoring: nye fakturaer gir 80 % forskudd med en gang i stedet for etter ~30 dager.
     if (valg.factoring && brukerReskontro && iso >= blandingSlutt) {
-      if (iso < leggTilDager(blandingSlutt, 30)) leggTil(iso, { navn: "Factoring: forskudd på nye fakturaer", belop: innDag * 0.8, kategori: "factoring" });
+      if (iso < leggTilDager(blandingSlutt, 30)) leggTil(iso, { navn: "Factoring: forskudd på nye fakturaer", belop: innDag * valg.factoringForskudd, kategori: "factoring" });
       leggTil(iso, { navn: "Factoringgebyr (1,5 %)", belop: -innDag * 0.015, kategori: "factoring" });
     }
     let utDag = (ut.niva * s * trendFaktor(ut.trend, h) * (1 - valg.omsetningsfall * 0.5)) / 5;
@@ -251,26 +257,27 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
     let forventet = leggTilDager(f.forfall, forsinkelse);
     if (forventet < leggTilDager(start, 3)) forventet = leggTilDager(start, 3 + (dagerMellom(f.forfall, start) > 30 ? 14 : 0));
     if (valg.innfordring) {
-      // Purring, inkassovarsel og dialog: forfalte fakturaer inn innen en uke, nye nær forfall
-      const raskere = f.forfall < start ? leggTilDager(start, 7) : leggTilDager(f.forfall, Math.min(forsinkelse, 5));
+      // Purring, inkassovarsel og dialog: forfalte fakturaer inn innen valgt antall dager, nye nær forfall
+      const raskere = f.forfall < start ? leggTilDager(start, valg.innfordringDager) : leggTilDager(f.forfall, Math.min(forsinkelse, 5));
       if (raskere < forventet) forventet = raskere;
     }
     if (debitor && debitor.navn === storste.navn) forventet = leggTilDager(forventet, valg.storsteKundeForsinkelse);
     if (valg.factoring) {
-      factoringUtbetalt += f.belop * 0.8;
-      leggTil(forventet, { navn: `Restbetaling factoring: ${f.debitor}`, belop: f.belop * 0.2 - f.belop * 0.015, kategori: "factoring" });
+      factoringUtbetalt += f.belop * valg.factoringForskudd;
+      leggTil(forventet, { navn: `Restbetaling factoring: ${f.debitor}`, belop: f.belop * (1 - valg.factoringForskudd) - f.belop * 0.015, kategori: "factoring" });
     } else {
       leggTil(forventet, { navn: `Faktura: ${f.debitor}`, belop: f.belop, kategori: "faktura" });
     }
   }
   if (factoringUtbetalt > 0) {
-    leggTil(leggTilDager(start, 3), { navn: "Factoring: forskudd på fakturaer (80 %)", belop: factoringUtbetalt, kategori: "factoring" });
+    leggTil(leggTilDager(start, 3), { navn: `Factoring: forskudd på fakturaer (${Math.round(valg.factoringForskudd * 100)} %)`, belop: factoringUtbetalt, kategori: "factoring" });
   }
 
   // 3. Kjente utbetalinger
   const mvaTilAvtale = (dato: string, belop: number, navn: string) => {
-    for (let i = 0; i < 3; i++) {
-      leggTil(leggTilDager(dato, i * 30), { navn: `${navn} (betalingsavtale ${i + 1}/3)`, belop: -(belop / 3) * 1.01, kategori: "mva" });
+    const n = Math.max(1, Math.round(valg.mvaAvtaleMnd));
+    for (let i = 0; i < n; i++) {
+      leggTil(leggTilDager(dato, i * 30), { navn: `${navn} (betalingsavtale ${i + 1}/${n})`, belop: -(belop / n) * (1 + 0.005 * n), kategori: "mva" });
     }
   };
   for (const p of kjentePoster(kunde, start, slutt, {

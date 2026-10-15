@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Kunde } from "@/lib/types";
 import { lagPrognose, oppsummerPoster, STANDARDVALG, type PrognoseValg } from "@/lib/prognose";
-import { tiltakFor, vurderTiltak, type Tiltak } from "@/lib/tiltak";
+import { tiltakFor, vurderTiltak, type Parameter, type Parametre, type Tiltak } from "@/lib/tiltak";
 import { kortDato } from "@/lib/dato";
 import { kr, mnok, omUker, prosent, tusen } from "@/lib/format";
 import { PrognoseGraf, Risikostripe } from "./PrognoseGraf";
@@ -14,18 +14,70 @@ interface Scenario {
   id: keyof PrognoseValg;
   tittel: string;
   beskrivelse: string;
-  verdi: number;
+  parameter: Parameter;
+  tilValg: (verdi: number) => number;
 }
 
 export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: number }) {
-  const [scenario, setScenario] = useState<PrognoseValg>(STANDARDVALG);
+  const [scenarioPa, setScenarioPa] = useState<string[]>([]);
+  const [scenarioVerdier, setScenarioVerdier] = useState<Parametre>({});
+  const [parametre, setParametre] = useState<Parametre>({});
   const [valgte, setValgte] = useState<string[]>([]);
   const [apenUke, setApenUke] = useState<number | null>(null);
   const [visMetode, setVisMetode] = useState(false);
 
-  const alleTiltak = useMemo(() => tiltakFor(kunde), [kunde]);
   const standard = useMemo(() => lagPrognose(kunde), [kunde]);
-  const vurdering = useMemo(() => vurderTiltak(kunde, scenario), [kunde, scenario]);
+
+  // Kort- og kontantsalg kan ikke «betale senere», så scenarioet gir bare mening for fakturakunder
+  const storsteErFakturakunde = !kunde.debitorer.some((d) => d.navn === standard.storsteDebitor && d.snittDagerForsinkelse <= 2 && d.andelAvInnbetalinger >= 0.6);
+  const sv = (id: string, standardverdi: number, min: number, maks: number) => {
+    const v = scenarioVerdier[id];
+    return v === undefined || !Number.isFinite(v) ? standardverdi : Math.min(maks, Math.max(min, v));
+  };
+  const vForsinkelse = sv("storsteKundeForsinkelse", 30, 5, 120);
+  const vRente = sv("renteTillegg", 1, -3, 10);
+  const vOmsetning = sv("omsetningsfall", 20, 5, 80);
+  const vStrom = sv("stromFaktor", 50, -50, 300);
+  const alleScenarioer: Scenario[] = [
+    {
+      id: "storsteKundeForsinkelse",
+      tittel: `${standard.storsteDebitor} betaler ${vForsinkelse} dager senere`,
+      beskrivelse: `Største kunde, ${prosent(standard.storsteDebitorAndel)} av innbetalingene`,
+      parameter: { etikett: "Forsinkelse", enhet: "dager", standard: 30, min: 5, maks: 120, steg: 5, verdi: vForsinkelse },
+      tilValg: (v) => v,
+    },
+    {
+      id: "renteTillegg",
+      tittel: `Renten ${vRente >= 0 ? "øker" : "faller"} ${String(Math.abs(vRente)).replace(".", ",")} prosentpoeng`,
+      beskrivelse: "På lån og kassekreditt",
+      parameter: { etikett: "Endring", enhet: "pp", standard: 1, min: -3, maks: 10, steg: 0.25, verdi: vRente },
+      tilValg: (v) => v / 100,
+    },
+    {
+      id: "omsetningsfall",
+      tittel: `Omsetningen faller ${vOmsetning} %`,
+      beskrivelse: "Variable kostnader faller bare halvparten",
+      parameter: { etikett: "Fall", enhet: "%", standard: 20, min: 5, maks: 80, steg: 5, verdi: vOmsetning },
+      tilValg: (v) => v / 100,
+    },
+    {
+      id: "stromFaktor",
+      tittel: `Strømprisen ${vStrom >= 0 ? "øker" : "faller"} ${Math.abs(vStrom)} %`,
+      beskrivelse: `Fra ${strompris.toFixed(2).replace(".", ",")} kr/kWh i dag (NO5), ${Math.round(kunde.faste.stromKwhPerMnd / 1000)} MWh/mnd`,
+      parameter: { etikett: "Endring", enhet: "%", standard: 50, min: -50, maks: 300, steg: 10, verdi: vStrom },
+      tilValg: (v) => 1 + v / 100,
+    },
+  ];
+  const scenarioer = alleScenarioer.filter((s) => s.id !== "storsteKundeForsinkelse" || storsteErFakturakunde);
+
+  const scenarioNokkel = JSON.stringify(
+    scenarioer.filter((x) => scenarioPa.includes(x.id)).reduce<PrognoseValg>((v, x) => ({ ...v, [x.id]: x.tilValg(x.parameter.verdi) }), STANDARDVALG),
+  );
+  const scenario = useMemo(() => JSON.parse(scenarioNokkel) as PrognoseValg, [scenarioNokkel]);
+  const parameterNokkel = JSON.stringify(parametre);
+
+  const alleTiltak = useMemo(() => tiltakFor(kunde, JSON.parse(parameterNokkel)), [kunde, parameterNokkel]);
+  const vurdering = useMemo(() => vurderTiltak(kunde, scenario, JSON.parse(parameterNokkel)), [kunde, scenario, parameterNokkel]);
   const aktiveTiltak = alleTiltak.filter((t) => valgte.includes(t.id));
   const valg = aktiveTiltak.reduce<PrognoseValg>((v, t) => ({ ...v, ...t.valg }), scenario);
   const valgNokkel = JSON.stringify(valg);
@@ -34,26 +86,11 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
     [kunde, valgNokkel, aktiveTiltak.length, vurdering.basis],
   );
 
-  const scenarioAktiv = JSON.stringify(scenario) !== JSON.stringify(STANDARDVALG);
+  const scenarioAktiv = scenarioNokkel !== JSON.stringify(STANDARDVALG);
   const sammenlign = aktiveTiltak.length ? vurdering.basis : scenarioAktiv ? standard : undefined;
   const sammenlignNavn = aktiveTiltak.length ? (scenarioAktiv ? "Scenario uten tiltak" : "Uten tiltak") : "Uten scenario";
 
-  // Kort- og kontantsalg kan ikke «betale senere», så scenarioet gir bare mening for fakturakunder
-  const storsteErFakturakunde = !kunde.debitorer.some((d) => d.navn === standard.storsteDebitor && d.snittDagerForsinkelse <= 2 && d.andelAvInnbetalinger >= 0.6);
-  const alleScenarioer: Scenario[] = [
-    { id: "storsteKundeForsinkelse", tittel: `${standard.storsteDebitor} betaler 30 dager senere`, beskrivelse: `Største kunde, ${prosent(standard.storsteDebitorAndel)} av innbetalingene`, verdi: 30 },
-    { id: "renteTillegg", tittel: "Renten øker 1 prosentpoeng", beskrivelse: "På lån og kassekreditt", verdi: 0.01 },
-    { id: "omsetningsfall", tittel: "Omsetningen faller 20 %", beskrivelse: "Variable kostnader faller bare halvparten", verdi: 0.2 },
-    {
-      id: "stromFaktor",
-      tittel: "Strømprisen øker 50 %",
-      beskrivelse: `Fra ${strompris.toFixed(2).replace(".", ",")} kr/kWh i dag (NO5), ${Math.round(kunde.faste.stromKwhPerMnd / 1000)} MWh/mnd`,
-      verdi: 1.5,
-    },
-  ];
-  const scenarioer = alleScenarioer.filter((s) => s.id !== "storsteKundeForsinkelse" || storsteErFakturakunde);
-
-  const veksleScenario = (s: Scenario) => setScenario((v) => ({ ...v, [s.id]: v[s.id] === STANDARDVALG[s.id] ? s.verdi : STANDARDVALG[s.id] }));
+  const veksleScenario = (id: string) => setScenarioPa((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
   const veksleTiltak = (id: string) => setValgte((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
   const effektFor = (id: string) => vurdering.effekter.find((e) => e.tiltak.id === id);
 
@@ -135,7 +172,15 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
         <Kort tittel="Hva om …?" hoyre={<span className="text-xs text-slate-500">Tiltakene vurderes alltid mot valgt scenario</span>}>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {scenarioer.map((s) => (
-              <Bryter key={s.id} tittel={s.tittel} beskrivelse={s.beskrivelse} pa={scenario[s.id] !== STANDARDVALG[s.id]} onClick={() => veksleScenario(s)} />
+              <Bryter
+                key={s.id}
+                tittel={s.tittel}
+                beskrivelse={s.beskrivelse}
+                pa={scenarioPa.includes(s.id)}
+                onClick={() => veksleScenario(s.id)}
+                parameter={s.parameter}
+                onEndre={(v) => setScenarioVerdier((p) => ({ ...p, [s.id]: v }))}
+              />
             ))}
           </div>
         </Kort>
@@ -153,7 +198,14 @@ export function KundePrognose({ kunde, strompris }: { kunde: Kunde; strompris: n
           <Anbefaling vurdering={vurdering} pakkeErValgt={pakkeErValgt} onBruk={() => setValgte(pakke ? pakke.tiltak.map((t) => t.id) : [])} />
           <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
             {alleTiltak.map((t) => (
-              <TiltakKnapp key={t.id} tiltak={t} pa={valgte.includes(t.id)} forbedring={effektFor(t.id)?.forbedring} onClick={() => veksleTiltak(t.id)} />
+              <TiltakKnapp
+                key={t.id}
+                tiltak={t}
+                pa={valgte.includes(t.id)}
+                forbedring={effektFor(t.id)?.forbedring}
+                onClick={() => veksleTiltak(t.id)}
+                onEndre={(v) => setParametre((p) => ({ ...p, [t.id]: v }))}
+              />
             ))}
           </div>
         </Kort>
@@ -270,15 +322,31 @@ const AKTOR_STIL: Record<string, string> = {
   Eier: "bg-amber-50 text-amber-800 ring-amber-200",
 };
 
-function TiltakKnapp({ tiltak, pa, forbedring, onClick }: { tiltak: Tiltak; pa: boolean; forbedring?: number; onClick: () => void }) {
+function TiltakKnapp({
+  tiltak,
+  pa,
+  forbedring,
+  onClick,
+  onEndre,
+}: {
+  tiltak: Tiltak;
+  pa: boolean;
+  forbedring?: number;
+  onClick: () => void;
+  onEndre: (verdi: number) => void;
+}) {
   const av = Boolean(tiltak.utilgjengelig);
   return (
-    <button
-      onClick={onClick}
-      disabled={av}
+    <div
+      role="button"
+      tabIndex={av ? -1 : 0}
+      aria-pressed={pa}
+      aria-disabled={av}
+      onClick={() => !av && onClick()}
+      onKeyDown={(e) => !av && (e.key === "Enter" || e.key === " ") && e.target === e.currentTarget && (e.preventDefault(), onClick())}
       title={tiltak.forbehold}
       className={`flex w-full items-start gap-3 rounded-lg border px-3 py-2 text-left transition ${
-        av ? "cursor-not-allowed border-slate-100 opacity-50" : pa ? "border-teal-600 bg-teal-50" : "border-slate-200 hover:border-slate-300"
+        av ? "cursor-not-allowed border-slate-100 opacity-50" : pa ? "cursor-pointer border-teal-600 bg-teal-50" : "cursor-pointer border-slate-200 hover:border-slate-300"
       }`}
     >
       <Vippe pa={pa} />
@@ -291,11 +359,50 @@ function TiltakKnapp({ tiltak, pa, forbedring, onClick }: { tiltak: Tiltak; pa: 
           )}
         </span>
         <span className="block text-xs text-slate-500">{tiltak.utilgjengelig ?? tiltak.beskrivelse}</span>
+        {tiltak.parameter && !av && <ParamFelt parameter={tiltak.parameter} onEndre={onEndre} />}
       </span>
       {forbedring !== undefined && !av && (
         <span className={`tall shrink-0 text-xs font-semibold ${forbedring > 0 ? "text-teal-700" : "text-slate-400"}`}>{forbedring > 0 ? `+${tusen(forbedring)}` : "±0"}</span>
       )}
-    </button>
+    </div>
+  );
+}
+
+const ENHET: Record<Parameter["enhet"], string> = { "%": "%", kr: "kr", dager: "dager", mnd: "mnd", pp: "prosentpoeng" };
+
+// Tallfelt som lar rådgiveren endre forutsetningen. Klikk i feltet vipper ikke tiltaket.
+function ParamFelt({ parameter, onEndre }: { parameter: Parameter; onEndre: (verdi: number) => void }) {
+  const [tekst, setTekst] = useState(String(parameter.verdi));
+  useEffect(() => setTekst(String(parameter.verdi)), [parameter.verdi]);
+  const endret = parameter.verdi !== parameter.standard;
+  return (
+    <span className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-600" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+      <span>{parameter.etikett}</span>
+      <input
+        type="number"
+        inputMode="decimal"
+        value={tekst}
+        min={parameter.min}
+        max={parameter.maks}
+        step={parameter.steg}
+        onChange={(e) => {
+          setTekst(e.target.value);
+          const tall = Number(e.target.value.replace(",", "."));
+          if (e.target.value !== "" && Number.isFinite(tall)) onEndre(tall);
+        }}
+        onBlur={() => setTekst(String(parameter.verdi))}
+        className={`tall rounded border bg-white px-1.5 py-0.5 text-right text-xs outline-none focus:border-teal-600 ${parameter.enhet === "kr" ? "w-28" : "w-16"} ${
+          endret ? "border-teal-500" : "border-slate-300"
+        }`}
+        aria-label={`${parameter.etikett} (${ENHET[parameter.enhet]})`}
+      />
+      <span>{ENHET[parameter.enhet]}</span>
+      {endret && (
+        <button type="button" onClick={() => onEndre(parameter.standard)} className="text-teal-700 hover:underline" title={`Tilbake til standard (${parameter.standard})`}>
+          standard
+        </button>
+      )}
+    </span>
   );
 }
 
@@ -359,18 +466,37 @@ function Vippe({ pa }: { pa: boolean }) {
   );
 }
 
-function Bryter({ tittel, beskrivelse, pa, onClick }: { tittel: string; beskrivelse: string; pa: boolean; onClick: () => void }) {
+function Bryter({
+  tittel,
+  beskrivelse,
+  pa,
+  onClick,
+  parameter,
+  onEndre,
+}: {
+  tittel: string;
+  beskrivelse: string;
+  pa: boolean;
+  onClick: () => void;
+  parameter: Parameter;
+  onEndre: (verdi: number) => void;
+}) {
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={pa}
       onClick={onClick}
-      className={`flex w-full items-start gap-3 rounded-lg border px-3 py-2 text-left transition ${pa ? "border-amber-500 bg-amber-50" : "border-slate-200 hover:border-slate-300"}`}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.target === e.currentTarget && (e.preventDefault(), onClick())}
+      className={`flex w-full cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 text-left transition ${pa ? "border-amber-500 bg-amber-50" : "border-slate-200 hover:border-slate-300"}`}
     >
       <Vippe pa={pa} />
-      <span>
+      <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium text-slate-900">{tittel}</span>
         <span className="block text-xs text-slate-500">{beskrivelse}</span>
+        <ParamFelt parameter={parameter} onEndre={onEndre} />
       </span>
-    </button>
+    </div>
   );
 }
 
