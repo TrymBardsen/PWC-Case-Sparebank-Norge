@@ -85,14 +85,19 @@ export function vurder(kunde: Kunde): Vurdering {
   // 1. Uker til tom kasse
   {
     const u = prognose.ukerTilTomKasse;
-    const poeng = u === null ? 0 : u <= 2 ? 30 : u <= 5 ? 24 : u <= 8 ? 15 : 8;
-    let forklaring = "Prognosen holder seg innenfor rammen de neste 13 ukene.";
+    const p = prognose.sannsynlighetInsolvens;
+    // Passerer prognosen grensen, teller tiden. Ellers teller sannsynligheten for at den gjør det.
+    const poeng = u !== null ? (u <= 2 ? 30 : u <= 5 ? 24 : u <= 8 ? 15 : 8) : p >= 0.4 ? 12 : p >= 0.2 ? 6 : p >= 0.1 ? 3 : 0;
+    let forklaring =
+      p >= 0.1
+        ? `Prognosen holder seg innenfor rammen, men det er ${prosent(p)} sannsynlighet for å passere insolvensgrensen.`
+        : "Prognosen holder seg innenfor rammen de neste 13 ukene.";
     if (prognose.tomKasseDato) {
       const uke = prognose.uker.find((x) => x.poster.some((p) => p.dato === prognose.tomKasseDato)) ?? prognose.uker[0];
       const storsteUt = oppsummerPoster(uke.poster).find((p) => p.belop < 0 && p.kategori !== "variabel");
-      forklaring = `Rammen er brukt opp ${kortDato(prognose.tomKasseDato)} (${omUker(u!)})${storsteUt ? `, utløst av ${storsteUt.navn.toLowerCase()} på ${kr(-storsteUt.belop)}` : ""}.`;
+      forklaring = `Rammen er brukt opp ${kortDato(prognose.tomKasseDato)} (${omUker(u!)})${storsteUt ? `, utløst av ${storsteUt.navn.toLowerCase()} på ${kr(-storsteUt.belop)}` : ""}. Sannsynlighet ${prosent(p)}.`;
     }
-    f.push({ id: "tomkasse", navn: "Uker til tom kasse", poeng, maks: 30, forklaring, kilde: "Prognose" });
+    f.push({ id: "tomkasse", navn: "Tid til insolvensgrensen", poeng, maks: 30, forklaring, kilde: "Prognose" });
   }
 
   // 2. Overtrekk og høy utnyttelse

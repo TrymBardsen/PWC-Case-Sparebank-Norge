@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { hentVurderinger, portefolje } from "@/lib/data";
 import { DAGENS_DATO, dagerMellom, kortDato } from "@/lib/dato";
-import { mnok, omUker } from "@/lib/format";
+import { mnok, omUker, prosent } from "@/lib/format";
 import { Kort, SamtykkeMerke, ScoreMerke, Utnyttelse } from "@/components/ui";
 
 export default function Portefoljeside() {
@@ -32,7 +32,7 @@ export default function Portefoljeside() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <Nokkeltall tittel="Kritisk" verdi={kritiske} farge="text-red-600" />
         <Nokkeltall tittel="Høy prioritet" verdi={hoye} farge="text-orange-500" />
-        <Nokkeltall tittel="Tom kasse innen 8 uker" verdi={tomInnen8} />
+        <Nokkeltall tittel="Passerer insolvensgrensen innen 8 uker" verdi={tomInnen8} />
         <Nokkeltall tittel="Ikke kontaktet på 4 mnd" verdi={glemte} />
         <Nokkeltall tittel="Kassekreditt brukt" verdi={`${Math.round((totalBrukt / totalRamme) * 100)} %`} under={`${mnok(totalBrukt)} av ${mnok(totalRamme)}`} />
       </div>
@@ -45,7 +45,7 @@ export default function Portefoljeside() {
                 <th className="py-2 pl-5 pr-3">Score</th>
                 <th className="px-3">Kunde</th>
                 <th className="px-3">Hvorfor</th>
-                <th className="px-3">Tom kasse</th>
+                <th className="px-3">Insolvensgrense</th>
                 <th className="px-3">Kassekreditt</th>
                 <th className="px-3">Siste kontakt</th>
                 <th className="px-3 pr-5">Datagrunnlag</th>
@@ -81,10 +81,17 @@ export default function Portefoljeside() {
                       {v.prognose.tomKasseDato ? (
                         <span className={v.prognose.ukerTilTomKasse! <= 2 ? "font-semibold text-red-600" : "font-medium text-orange-600"}>
                           {kortDato(v.prognose.tomKasseDato)}
-                          <span className="block text-xs font-normal text-slate-500">{omUker(v.prognose.ukerTilTomKasse!)}</span>
+                          <span className="block text-xs font-normal text-slate-500">
+                            {omUker(v.prognose.ukerTilTomKasse!)} · {prosent(v.prognose.sannsynlighetInsolvens)}
+                          </span>
                         </span>
                       ) : (
-                        <span className="text-slate-400">–</span>
+                        <span className="text-slate-400">
+                          –
+                          {v.prognose.sannsynlighetInsolvens >= 0.1 && (
+                            <span className="block text-xs text-amber-700">{prosent(v.prognose.sannsynlighetInsolvens)} sannsynlighet</span>
+                          )}
+                        </span>
                       )}
                     </td>
                     <td className="px-3 py-3">

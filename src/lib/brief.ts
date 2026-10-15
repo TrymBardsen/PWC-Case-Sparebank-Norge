@@ -5,7 +5,8 @@ import { z } from "zod";
 import type { Kunde } from "./types";
 import type { Smitte, Vurdering } from "./score";
 import { DAGENS_DATO, dagerMellom, kortDato, langDato } from "./dato";
-import { lagPrognose, oppsummerPoster, STANDARDVALG } from "./prognose";
+import { oppsummerPoster } from "./prognose";
+import { tiltakFor, vurderTiltak } from "./tiltak";
 import { kr, mnok, omUker, prosent } from "./format";
 
 export const BriefSchema = z.object({
@@ -33,10 +34,12 @@ export type Brief = z.infer<typeof BriefSchema> & { kilde: "claude" | "mal"; mod
 export function lagFakta(kunde: Kunde, vurdering: Vurdering, smitte: Smitte[], alleKunder: Kunde[]) {
   const p = vurdering.prognose;
   const navn = (id: string) => alleKunder.find((k) => k.id === id)?.navn ?? id;
-  const tiltakseffekt = (valg: Partial<typeof STANDARDVALG>) => {
-    const t = lagPrognose(kunde, { ...STANDARDVALG, ...valg });
-    return { tomKasse: t.tomKasseDato ? kortDato(t.tomKasseDato) : "holder i 13 uker", lavesteSaldo: kr(t.lavesteSaldo) };
-  };
+  const tv = vurderTiltak(kunde);
+  const effekt = (pr: typeof p) => ({
+    grensenPasseres: pr.tomKasseDato ? kortDato(pr.tomKasseDato) : "nei",
+    marginPaLaveste: kr(pr.margin),
+    sannsynlighetInsolvens: prosent(pr.sannsynlighetInsolvens),
+  });
   const tomUke = p.tomKasseDato ? p.uker.find((u) => u.poster.some((x) => x.dato === p.tomKasseDato)) : undefined;
 
   return {
@@ -69,12 +72,22 @@ export function lagFakta(kunde: Kunde, vurdering: Vurdering, smitte: Smitte[], a
     },
     debitorer: kunde.debitorer.map((d) => ({ navn: d.navn, andel: prosent(d.andelAvInnbetalinger), snittDagerForsinkelse: d.snittDagerForsinkelse })),
     utestaendeFakturaer: kunde.fakturaer?.map((f) => ({ debitor: f.debitor, belop: kr(f.belop), forfall: kortDato(f.forfall), dagerOverForfall: Math.max(0, dagerMellom(f.forfall, DAGENS_DATO)) })),
-    tiltakseffekt: {
-      utgangspunkt: { tomKasse: p.tomKasseDato ? kortDato(p.tomKasseDato) : "holder", lavesteSaldo: kr(p.lavesteSaldo) },
-      factoring: kunde.fakturaer?.length ? tiltakseffekt({ factoring: true }) : "ikke mulig uten reskontro",
-      midlertidigRammeokning: tiltakseffekt({ rammeokning: Math.max(500_000, Math.round((kunde.kassekredittRamme * 0.4) / 100_000) * 100_000) }),
-      avdragsfrihet: kunde.lan.length ? tiltakseffekt({ avdragsfrihet: true }) : "ingen lån",
+    insolvens: {
+      grense: `${kr(-p.ramme)} (kassekreditten brukt opp; kunden kan ikke betale forfalte krav)`,
+      ...effekt(p),
+      dagerUnderGrensen: p.dagerUnderGrensen,
     },
+    tiltak: tv.effekter.map((e) => ({
+      navn: e.tiltak.navn,
+      beskrivelse: e.tiltak.beskrivelse,
+      aktor: e.tiltak.aktor,
+      betalingslettelse: e.tiltak.betalingslettelse,
+      forbehold: e.tiltak.forbehold,
+      forbedringAvMargin: kr(e.forbedring),
+      ...effekt(e.prognose),
+    })),
+    ikkeMuligeTiltak: tiltakFor(kunde).filter((t) => t.utilgjengelig).map((t) => `${t.navn}: ${t.utilgjengelig}`),
+    anbefaltPakke: tv.pakke ? { tiltak: tv.pakke.tiltak.map((t) => t.navn), ...effekt(tv.pakke.prognose) } : "ingen tiltak nødvendig",
     nettverk: smitte
       .filter((s) => s.fra === kunde.id || s.til === kunde.id)
       .map((s) => (s.fra === kunde.id ? `${navn(s.til)} får ${prosent(s.andel)} av innbetalingene sine fra denne kunden` : `Får ${prosent(s.andel)} av innbetalingene fra ${navn(s.fra)}`)),
@@ -90,7 +103,8 @@ Du får et JSON-objekt med fakta som banken allerede har beregnet. Regler:
 - Hvert punkt under hvaHarSkjedd skal ha en kilde som peker på et signal, prognosen, reskontro eller et rådgivernotat.
 - Les rådgivernotatene nøye; de inneholder ofte det viktigste tidlige signalet.
 - Målet er å hjelpe kunden gjennom en vanskelig periode, ikke å redusere bankens risiko for enhver pris. Unngå tiltak som kan utløse krisen (f.eks. å kutte rammen nå).
-- Tiltak skal være konkrete og bruke tiltakseffekt-tallene der de finnes. Nevn at betalingslettelser må vurderes og dokumenteres etter bankens retningslinjer.
+- Insolvensgrensen er når kassekreditten er brukt opp. Forklar hvor nær kunden er grensen, når den passeres og hvor sannsynlig det er.
+- Tiltak skal velges fra listen tiltak, bruke effekttallene derfra og helst bygge på anbefaltPakke. Merk tiltak som er betalingslettelser: de må vurderes, merkes og dokumenteres etter bankens retningslinjer.
 - Du er beslutningsstøtte. Rådgiveren tar beslutningen.
 - Skriv på norsk bokmål, kort og presist, uten markdown.`;
 
@@ -101,34 +115,26 @@ export function lagMalBrief(fakta: ReturnType<typeof lagFakta>, kunde: Kunde): B
   const storste = kunde.debitorer[0];
   const sisteNotat = kunde.notater[kunde.notater.length - 1];
 
-  const tiltak: Brief["tiltak"] = [];
-  const te = fakta.tiltakseffekt;
-  if (typeof te.factoring === "object")
-    tiltak.push({
-      navn: "Løpende factoring",
-      begrunnelse: "Kunden har betydelige kundefordringer som binder likviditet.",
-      effekt: `Tom kasse: ${te.factoring.tomKasse}. Laveste saldo: ${te.factoring.lavesteSaldo}.`,
-      forbehold: "Koster gebyr og forutsetter at debitorene er kredittverdige.",
-    });
-  tiltak.push({
-    navn: "Midlertidig økt kassekredittramme",
-    begrunnelse: "Gir pusterom gjennom de tyngste forfallene.",
-    effekt: `Tom kasse: ${te.midlertidigRammeokning.tomKasse}. Laveste saldo: ${te.midlertidigRammeokning.lavesteSaldo}.`,
-    forbehold: "Løser ikke det underliggende problemet. Bør kobles til en plan og ev. sikkerhet.",
-  });
-  if (typeof te.avdragsfrihet === "object")
-    tiltak.push({
-      navn: "Avdragsfrihet i en periode",
-      begrunnelse: "Reduserer faste utbetalinger mens kunden henter seg inn.",
-      effekt: `Tom kasse: ${te.avdragsfrihet.tomKasse}. Laveste saldo: ${te.avdragsfrihet.lavesteSaldo}.`,
-      forbehold: "Er en betalingslettelse som må vurderes og dokumenteres etter retningslinjene.",
-    });
+  const tv = vurderTiltak(kunde);
+  const pakkeIder = tv.pakke?.tiltak.map((t) => t.id) ?? [];
+  const tiltak: Brief["tiltak"] = [...tv.effekter]
+    .filter((e) => e.forbedring > 0)
+    .sort((a, b) => Number(pakkeIder.includes(b.tiltak.id)) - Number(pakkeIder.includes(a.tiltak.id)) || b.forbedring - a.forbedring)
+    .slice(0, 4)
+    .map((e) => ({
+      navn: e.tiltak.navn,
+      begrunnelse: e.tiltak.beskrivelse,
+      effekt: `Margin til insolvensgrensen ${kr(e.prognose.margin)} (${e.forbedring > 0 ? "+" : ""}${kr(e.forbedring)}). Sannsynlighet ${prosent(e.prognose.sannsynlighetInsolvens)}.`,
+      forbehold: e.tiltak.forbehold,
+    }));
 
   return {
     kilde: "mal",
     oppsummering: p.tomKasse.startsWith("nei")
       ? `${kunde.navn} holder seg innenfor rammen de neste 13 ukene, men har ${signaler.length} signaler som bør følges opp.`
-      : `Prognosen viser at ${kunde.navn} bruker opp kassekreditten ${p.tomKasse}. Laveste saldo er ${p.lavesteSaldo}.`,
+      : `Prognosen viser at ${kunde.navn} passerer insolvensgrensen (${fakta.insolvens.grense.split(" (")[0]}) ${p.tomKasse}, med ${fakta.insolvens.sannsynlighetInsolvens} sannsynlighet. På det verste mangler ${kr(-tv.basis.margin)}.${
+          tv.pakke ? ` Anbefalt tiltak: ${tv.pakke.tiltak.map((t) => t.navn.toLowerCase()).join(" og ")}.` : ""
+        }`,
     hvaHarSkjedd: [
       ...signaler.slice(0, 4).map((s) => ({ punkt: s.forklaring, kilde: `${s.kilde}: ${s.signal}` })),
       ...(sisteNotat ? [{ punkt: `Siste notat: «${sisteNotat.tekst}»`, kilde: `Rådgivernotat ${kortDato(sisteNotat.dato)}` }] : []),

@@ -27,6 +27,8 @@ const SKATT_MANEDER = [0, 2, 4, 6, 8, 10]; // forskuddstrekk og AGA forfaller 15
 
 export interface KalenderValg {
   estimertInnPerMnd: number;
+  // Faktiske innbetalinger for en måned (år, 0-indeksert måned) når de er kjent
+  innForMaaned?: (aar: number, mnd: number) => number | undefined;
   stromFaktor?: number; // 1 = dagens pris
   renteTillegg?: number; // prosentpoeng som desimal, f.eks. 0.01
   utenAvdrag?: boolean;
@@ -77,10 +79,15 @@ export function kjentePoster(kunde: Kunde, fra: string, til: string, valg: Kalen
     }
     for (const m of MVA_FORFALL) {
       if (mnd === m.mnd && dag === m.dag) {
+        // Terminen dekker de to månedene som slutter to måneder før forfall
+        const grunnlag = [3, 2].reduce((sum, tilbake) => {
+          const t = new Date(Date.UTC(d.getUTCFullYear(), mnd - tilbake, 1));
+          return sum + (valg.innForMaaned?.(t.getUTCFullYear(), t.getUTCMonth()) ?? valg.estimertInnPerMnd);
+        }, 0);
         poster.push({
           dato: iso,
           navn: `MVA ${m.termin}`,
-          belop: Math.round(valg.estimertInnPerMnd * 2 * f.mvaAndelAvOmsetning),
+          belop: Math.round(grunnlag * f.mvaAndelAvOmsetning),
           kategori: "mva",
         });
       }

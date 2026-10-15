@@ -18,14 +18,30 @@ export default function Om() {
 
       <Kort tittel="Hvordan prognosen virker">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-slate-700">
-          <li>Normalnivå for inn- og utbetalinger fra siste 8 uker, sesongjustert per bransje.</li>
-          <li>Kjente utbetalinger legges på eksakt dato: lønn (20.), forskuddstrekk og AGA (15. annenhver måned), MVA-terminer, husleie, strøm, renter og avdrag.</li>
+          <li>Sesong: kundens egen profil fra i fjor, blandet 50/50 med bransjeprofilen. De siste 13 ukene holdes utenfor, så et fall nå ikke forveksles med sesong.</li>
+          <li>Nivå: vektet snitt av siste 12 uker der de nyeste ukene teller mest, og en trend som videreføres, men dempes uke for uke.</li>
+          <li>Kjente utbetalinger legges på eksakt dato: lønn, forskuddstrekk og AGA, MVA (regnet av faktisk omsetning i terminen), husleie, strøm, renter og avdrag.</li>
           <li>Med samtykke til regnskapssystemet erstattes de første fire ukene av faktiske fakturaer, justert for hvor sent hver kunde pleier å betale.</li>
-          <li>Restanser, forfalte terminer og forfalt leverandørgjeld trekkes ut tidlig i perioden.</li>
-          <li>Usikkerhetsbåndet er dobbelt så bredt uten reskontro. Det viser kunden verdien av å dele data.</li>
+          <li>Usikkerheten måles fra kundens egen uke-til-uke-variasjon. Den gir et 80 %-intervall og sannsynligheten for å passere insolvensgrensen hver dag.</li>
           <li>Bevisst regelbasert, ikke en svart boks: hver krone kan spores til en post. Det gjør varselet forklarbart (EU AI Act) og lett å stole på.</li>
         </ul>
       </Kort>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Kort tittel="Insolvensgrensen">
+          <p className="text-sm text-slate-700">
+            Grensen settes der kassekreditten er brukt opp. Under den kan kunden ikke betale forpliktelser når de forfaller (illikviditet, jf. konkursloven § 61), og
+            mislighold følger raskt. Grafen viser en rød sone under grensen, en varselsone over 90 % av rammen, datoen grensen passeres og sannsynligheten uke for uke.
+          </p>
+        </Kort>
+        <Kort tittel="Tiltak mot mislighold">
+          <p className="text-sm text-slate-700">
+            Åtte tiltak regnes inn i prognosen: aktiv innfordring, betalingsavtale for MVA, avdragsfrihet, kostnadskutt, factoring, omgjøring av kassekreditt til lån,
+            midlertidig ramme og kapitaltilskudd. Den anbefalte pakken velger de minst inngripende tiltakene som holder kunden over grensen. Betalingslettelser merkes, så
+            de kan rapporteres.
+          </p>
+        </Kort>
+      </div>
 
       <Kort tittel="Datakilder">
         <table className="w-full text-sm">
