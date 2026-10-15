@@ -22,7 +22,21 @@ interface Scenario {
 
 // mote: visning for kunden i møtet. Ingen interne vurderinger (anbefalt pakke, betalingslettelse,
 // bankens forbehold) og nøytrale ord («kassekredittrammen» i stedet for «insolvensgrensen»).
-export function KundePrognose({ kunde, strompris, mote = false }: { kunde: Kunde; strompris: number; mote?: boolean }) {
+// Oppsett: prognosen står fast til venstre mens rådgiveren velger tiltak og scenarioer til høyre (bred skjerm).
+// «venstre» og «hoyre» er resten av kundesiden, som legges under prognosedelen.
+export function KundePrognose({
+  kunde,
+  strompris,
+  mote = false,
+  venstre,
+  hoyre,
+}: {
+  kunde: Kunde;
+  strompris: number;
+  mote?: boolean;
+  venstre?: React.ReactNode;
+  hoyre?: React.ReactNode;
+}) {
   const [scenarioPa, setScenarioPa] = useState<string[]>([]);
   const [scenarioVerdier, setScenarioVerdier] = useState<Parametre>({});
   const [parametre, setParametre] = useState<Parametre>({});
@@ -120,181 +134,197 @@ export function KundePrognose({ kunde, strompris, mote = false }: { kunde: Kunde
 
   return (
     <div className="space-y-6">
-      <Kort
-        overtittel="Saldo inkl. trekkramme"
-        tittel="Likviditetsprognose neste 13 uker"
-        hoyre={
-          !mote && (
-            <button onClick={() => setVisMetode((v) => !v)} className="text-sm font-semibold text-snb-rod hover:underline">
-              {visMetode ? "Skjul metode" : "Slik er prognosen laget"}
-            </button>
-          )
-        }
-      >
-        {visMetode && !mote && <Metodeboks kunde={kunde} prognose={prognose} />}
-
-        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Tall
-            tittel={mote ? "Kassekredittramme" : "Insolvensgrense"}
-            verdi={mnok(mote ? prognose.ramme : -prognose.ramme)}
-            under={valg.rammeokning ? `inkl. +${mnok(valg.rammeokning)} midlertidig ramme` : mote ? `saldoen kan ikke gå under ${mnok(-prognose.ramme)}` : "kassekreditten brukt opp"}
-            farge="text-red-600"
-          />
-          <Tall
-            tittel={mote ? "Rammen strekker ikke til" : "Grensen passeres"}
-            verdi={prognose.tomKasseDato ? kortDato(prognose.tomKasseDato) : "Nei"}
-            under={prognose.tomKasseDato ? `${omUker(prognose.ukerTilTomKasse!)} · ${prognose.dagerUnderGrensen} dager under` : "ikke i forventet forløp"}
-            farge={prognose.tomKasseDato ? "text-red-600" : "text-emerald-700"}
-            sammenlign={sammenlign ? `${sammenlignNavn}: ${sammenlign.tomKasseDato ? kortDato(sammenlign.tomKasseDato) : "nei"}` : undefined}
-          />
-          <Tall
-            tittel={mote ? "Sannsynlighet" : "Sannsynlighet for insolvens"}
-            verdi={prosent(prognose.sannsynlighetInsolvens)}
-            under={mote ? "for at rammen ikke strekker til i perioden" : "for å havne under grensen i perioden"}
-            farge={prognose.sannsynlighetInsolvens >= 0.5 ? "text-red-600" : prognose.sannsynlighetInsolvens >= 0.2 ? "text-amber-600" : "text-emerald-700"}
-            sammenlign={sammenlign ? `${sammenlignNavn}: ${prosent(sammenlign.sannsynlighetInsolvens)}` : undefined}
-          />
-          <Tall
-            tittel={under ? "Mangler på det verste" : "Margin på det laveste"}
-            verdi={kr(Math.abs(prognose.margin))}
-            under={`${kortDato(prognose.lavesteDato)} · saldo ${mnok(prognose.lavesteSaldo)}`}
-            farge={under ? "text-red-600" : "text-emerald-700"}
-            sammenlign={
-              sammenlign ? `${prognose.margin - sammenlign.margin >= 0 ? "+" : "−"}${kr(Math.abs(prognose.margin - sammenlign.margin))} mot ${sammenlignNavn.toLowerCase()}` : undefined
+      {/* Bred skjerm: tiltakskolonnen er like høy som prognosen og har egen rulling,
+          så musehjulet blar bare i tiltakene når pekeren står der */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div>
+          <Kort
+            overtittel="Saldo inkl. trekkramme"
+            tittel="Likviditetsprognose neste 13 uker"
+            hoyre={
+              !mote && (
+                <button onClick={() => setVisMetode((v) => !v)} className="text-sm font-semibold text-snb-rod hover:underline">
+                  {visMetode ? "Skjul metode" : "Slik er prognosen laget"}
+                </button>
+              )
             }
-          />
+          >
+            {visMetode && !mote && <Metodeboks kunde={kunde} prognose={prognose} />}
+
+            <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <Tall
+                tittel={mote ? "Kassekredittramme" : "Insolvensgrense"}
+                verdi={mnok(mote ? prognose.ramme : -prognose.ramme)}
+                under={valg.rammeokning ? `inkl. +${mnok(valg.rammeokning)} midlertidig ramme` : mote ? `saldoen kan ikke gå under ${mnok(-prognose.ramme)}` : "kassekreditten brukt opp"}
+                farge="text-red-600"
+              />
+              <Tall
+                tittel={mote ? "Rammen strekker ikke til" : "Grensen passeres"}
+                verdi={prognose.tomKasseDato ? kortDato(prognose.tomKasseDato) : "Nei"}
+                under={prognose.tomKasseDato ? `${omUker(prognose.ukerTilTomKasse!)} · ${prognose.dagerUnderGrensen} dager under` : "ikke i forventet forløp"}
+                farge={prognose.tomKasseDato ? "text-red-600" : "text-emerald-700"}
+                sammenlign={sammenlign ? `${sammenlignNavn}: ${sammenlign.tomKasseDato ? kortDato(sammenlign.tomKasseDato) : "nei"}` : undefined}
+              />
+              <Tall
+                tittel={mote ? "Sannsynlighet" : "Sannsynlighet for insolvens"}
+                verdi={prosent(prognose.sannsynlighetInsolvens)}
+                under={mote ? "for at rammen ikke strekker til i perioden" : "for å havne under grensen i perioden"}
+                farge={prognose.sannsynlighetInsolvens >= 0.5 ? "text-red-600" : prognose.sannsynlighetInsolvens >= 0.2 ? "text-amber-600" : "text-emerald-700"}
+                sammenlign={sammenlign ? `${sammenlignNavn}: ${prosent(sammenlign.sannsynlighetInsolvens)}` : undefined}
+              />
+              <Tall
+                tittel={under ? "Mangler på det verste" : "Margin på det laveste"}
+                verdi={kr(Math.abs(prognose.margin))}
+                under={`${kortDato(prognose.lavesteDato)} · saldo ${mnok(prognose.lavesteSaldo)}`}
+                farge={under ? "text-red-600" : "text-emerald-700"}
+                sammenlign={
+                  sammenlign ? `${prognose.margin - sammenlign.margin >= 0 ? "+" : "−"}${kr(Math.abs(prognose.margin - sammenlign.margin))} mot ${sammenlignNavn.toLowerCase()}` : undefined
+                }
+              />
+            </div>
+
+            <PrognoseGraf historikk={kunde.dagligSaldo} prognose={prognose} sammenlign={sammenlign} sammenlignNavn={sammenlignNavn} grenseNavn={mote ? "Kassekredittramme" : "Insolvensgrense"} />
+            <div className="mt-2 mb-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+              <Forklaring stil={{ background: "#475569" }} tekst="Faktisk saldo" />
+              <Forklaring stil={{ background: "#0f766e" }} tekst={aktiveTiltak.length ? "Prognose med tiltak" : "Prognose"} />
+              {sammenlign && <Forklaring stil={{ borderTop: "2px dashed #94a3b8", height: 0 }} tekst={sammenlignNavn} />}
+              <Forklaring stil={{ background: "rgba(15,118,110,0.15)", height: 10 }} tekst="80 %-intervall" />
+              <Forklaring stil={{ background: "rgba(217,119,6,0.18)", height: 10 }} tekst="Varselsone (over 90 % av rammen)" />
+              <Forklaring stil={{ background: "rgba(220,38,38,0.15)", height: 10 }} tekst={mote ? "Under rammen: regninger kan ikke betales" : "Betalingsudyktig: kan ikke betale forfalte krav"} />
+            </div>
+            <Risikostripe prognose={prognose} grenseNavn={mote ? "kassekredittrammen" : "insolvensgrensen"} />
+          </Kort>
         </div>
 
-        <PrognoseGraf historikk={kunde.dagligSaldo} prognose={prognose} sammenlign={sammenlign} sammenlignNavn={sammenlignNavn} grenseNavn={mote ? "Kassekredittramme" : "Insolvensgrense"} />
-        <div className="mt-2 mb-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-          <Forklaring stil={{ background: "#475569" }} tekst="Faktisk saldo" />
-          <Forklaring stil={{ background: "#0f766e" }} tekst={aktiveTiltak.length ? "Prognose med tiltak" : "Prognose"} />
-          {sammenlign && <Forklaring stil={{ borderTop: "2px dashed #94a3b8", height: 0 }} tekst={sammenlignNavn} />}
-          <Forklaring stil={{ background: "rgba(15,118,110,0.15)", height: 10 }} tekst="80 %-intervall" />
-          <Forklaring stil={{ background: "rgba(217,119,6,0.18)", height: 10 }} tekst="Varselsone (over 90 % av rammen)" />
-          <Forklaring stil={{ background: "rgba(220,38,38,0.15)", height: 10 }} tekst={mote ? "Under rammen: regninger kan ikke betales" : "Betalingsudyktig: kan ikke betale forfalte krav"} />
+        <div className="relative">
+          <div className="space-y-6 xl:absolute xl:inset-0 xl:overflow-y-auto xl:overscroll-contain xl:rounded-lg xl:pr-1 xl:pb-10">
+            <Kort
+              overtittel={`${alleTiltak.length} mulige tiltak · velg for å simulere`}
+              tittel={mote ? "Mulige tiltak" : "Tiltak mot mislighold"}
+              hoyre={
+                valgte.length > 0 && (
+                  <button onClick={() => setValgte([])} className="text-sm font-semibold text-snb-rod hover:underline">
+                    Fjern alle tiltak
+                  </button>
+                )
+              }
+            >
+              {mote ? (
+                <p className="text-sm text-slate-600">Slå på ett eller flere tiltak for å se hvordan de påvirker saldoen i grafen.</p>
+              ) : (
+                <Anbefaling vurdering={vurdering} pakkeErValgt={pakkeErValgt} onBruk={() => setValgte(pakke ? pakke.tiltak.map((t) => t.id) : [])} />
+              )}
+              <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-1">
+                {alleTiltak.map((t) => (
+                  <TiltakKnapp
+                    key={t.id}
+                    tiltak={t}
+                    pa={valgte.includes(t.id)}
+                    mote={mote}
+                    forbedring={effektFor(t.id)?.forbedring}
+                    onClick={() => veksleTiltak(t.id)}
+                    onEndre={(v) => setParametre((p) => ({ ...p, [t.id]: v }))}
+                  />
+                ))}
+              </div>
+            </Kort>
+            <Kort overtittel="Scenarioer" tittel="Hva om …?">
+              <p className="mb-3 text-xs text-slate-500">Tiltakene vurderes alltid mot valgt scenario.</p>
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-1">
+                {scenarioer.map((s) => (
+                  <Bryter
+                    key={s.id}
+                    tittel={s.tittel}
+                    beskrivelse={s.beskrivelse}
+                    pa={scenarioPa.includes(s.id)}
+                    onClick={() => veksleScenario(s.id)}
+                    parameter={s.parameter}
+                    onEndre={(v) => setScenarioVerdier((p) => ({ ...p, [s.id]: v }))}
+                  />
+                ))}
+              </div>
+            </Kort>
+          </div>
+          {/* Toning nederst viser at det er mer å bla til */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-10 rounded-b-lg bg-gradient-to-t from-white to-transparent xl:block" />
         </div>
-        <Risikostripe prognose={prognose} grenseNavn={mote ? "kassekredittrammen" : "insolvensgrensen"} />
-      </Kort>
-
-      <div className="space-y-6">
-        <Kort overtittel="Scenarioer" tittel="Hva om …?" hoyre={<span className="text-xs text-slate-500">Tiltakene vurderes alltid mot valgt scenario</span>}>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-            {scenarioer.map((s) => (
-              <Bryter
-                key={s.id}
-                tittel={s.tittel}
-                beskrivelse={s.beskrivelse}
-                pa={scenarioPa.includes(s.id)}
-                onClick={() => veksleScenario(s.id)}
-                parameter={s.parameter}
-                onEndre={(v) => setScenarioVerdier((p) => ({ ...p, [s.id]: v }))}
-              />
-            ))}
-          </div>
-        </Kort>
-
-        <Kort
-          overtittel={`${alleTiltak.length} mulige tiltak · velg for å simulere`}
-          tittel={mote ? "Mulige tiltak" : "Tiltak mot mislighold"}
-          hoyre={
-            valgte.length > 0 && (
-              <button onClick={() => setValgte([])} className="text-sm font-semibold text-snb-rod hover:underline">
-                Fjern alle tiltak
-              </button>
-            )
-          }
-        >
-          {mote ? (
-            <p className="text-sm text-slate-600">Slå på ett eller flere tiltak for å se hvordan de påvirker saldoen i grafen over.</p>
-          ) : (
-            <Anbefaling vurdering={vurdering} pakkeErValgt={pakkeErValgt} onBruk={() => setValgte(pakke ? pakke.tiltak.map((t) => t.id) : [])} />
-          )}
-          <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
-            {alleTiltak.map((t) => (
-              <TiltakKnapp
-                key={t.id}
-                tiltak={t}
-                pa={valgte.includes(t.id)}
-                mote={mote}
-                forbedring={effektFor(t.id)?.forbedring}
-                onClick={() => veksleTiltak(t.id)}
-                onEndre={(v) => setParametre((p) => ({ ...p, [t.id]: v }))}
-              />
-            ))}
-          </div>
-        </Kort>
       </div>
 
-      {gronn && (
-        <GronnKort g={gronn} klimakrav={kunde.klimakrav} aktiv={valgte.includes("energitiltak")} onVis={() => veksleTiltak("energitiltak")} />
-      )}
+      <div className={hoyre ? "grid grid-cols-1 gap-6 xl:grid-cols-3" : ""}>
+        <div className={`space-y-6 ${hoyre ? "xl:col-span-2" : ""}`}>
+          {gronn && (
+            <GronnKort g={gronn} klimakrav={kunde.klimakrav} aktiv={valgte.includes("energitiltak")} onVis={() => veksleTiltak("energitiltak")} />
+          )}
 
-      <Kort
-        overtittel={`Margin til ${mote ? "kassekredittrammen" : "insolvensgrensen"} på det laveste punktet`}
-        tittel="Effekt av tiltak"
-        hoyre={<span className="text-xs text-slate-500">Hvert tiltak alene{scenarioAktiv ? ", gitt valgt scenario" : ""}</span>}
-      >
-        <TiltakGraf rader={rader} grenseNavn={mote ? "Kassekredittramme" : "Insolvensgrense"} />
-        <p className="mt-2 text-xs text-slate-500">
-          {mote ? "Søyler til venstre for streken betyr at rammen fortsatt ikke strekker til." : "Søyler til venstre for streken betyr at kunden fortsatt blir betalingsudyktig."} Tiltak som bare flytter betalinger i tid (f.eks. innfordring) kan hjelpe
-          tidlig i perioden uten å endre det laveste punktet.
-        </p>
-      </Kort>
+          <Kort
+            overtittel={`Margin til ${mote ? "kassekredittrammen" : "insolvensgrensen"} på det laveste punktet`}
+            tittel="Effekt av tiltak"
+            hoyre={<span className="text-xs text-slate-500">Hvert tiltak alene{scenarioAktiv ? ", gitt valgt scenario" : ""}</span>}
+          >
+            <TiltakGraf rader={rader} grenseNavn={mote ? "Kassekredittramme" : "Insolvensgrense"} />
+            <p className="mt-2 text-xs text-slate-500">
+              {mote ? "Søyler til venstre for streken betyr at rammen fortsatt ikke strekker til." : "Søyler til venstre for streken betyr at kunden fortsatt blir betalingsudyktig."} Tiltak som bare flytter betalinger i tid (f.eks. innfordring) kan hjelpe
+              tidlig i perioden uten å endre det laveste punktet.
+            </p>
+          </Kort>
 
-      <Kort overtittel="Kontantstrøm" tittel="Uke for uke" hoyre={<span className="text-xs text-slate-500">Klikk en uke for å se postene</span>}>
-        <div className="-mx-5 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-                <th className="py-2 pl-5">Uke</th>
-                <th className="text-right">Inn</th>
-                <th className="text-right">Ut</th>
-                <th className="text-right">Laveste saldo</th>
-                <th className="text-right">Saldo ved ukeslutt</th>
-                <th className="pr-5 text-right">Sannsynlighet</th>
-              </tr>
-            </thead>
-            <tbody>
-              {prognose.uker.map((u) => {
-                const brudd = u.minSaldo < -prognose.ramme;
-                return (
-                  <FragmentRad key={u.nr}>
-                    <tr
-                      onClick={() => setApenUke(apenUke === u.nr ? null : u.nr)}
-                      className={`tall cursor-pointer border-b border-slate-100 hover:bg-slate-50 ${brudd ? "bg-red-50/70" : ""}`}
-                    >
-                      <td className="py-2 pl-5">
-                        <span className="mr-2 text-slate-400">{apenUke === u.nr ? "▾" : "▸"}</span>
-                        {kortDato(u.fra)}
-                      </td>
-                      <td className="text-right text-emerald-700">{kr(u.inn)}</td>
-                      <td className="text-right text-slate-700">−{kr(u.ut)}</td>
-                      <td className={`text-right ${brudd ? "font-semibold text-red-600" : ""}`}>{kr(u.minSaldo)}</td>
-                      <td className="text-right font-medium">{kr(u.sluttSaldo)}</td>
-                      <td className={`pr-5 text-right ${u.sannsynlighet >= 0.5 ? "font-semibold text-red-600" : "text-slate-600"}`}>{prosent(u.sannsynlighet)}</td>
-                    </tr>
-                    {apenUke === u.nr && (
-                      <tr className="border-b border-slate-100 bg-slate-50">
-                        <td colSpan={6} className="px-5 py-2">
-                          <ul className="grid grid-cols-1 gap-x-8 gap-y-1 text-xs md:grid-cols-2">
-                            {oppsummerPoster(u.poster).map((p) => (
-                              <li key={p.navn} className="flex justify-between gap-4">
-                                <span className={p.kategori === "tiltak" || p.kategori === "factoring" ? "font-medium text-teal-800" : "text-slate-600"}>{p.navn}</span>
-                                <span className={`tall ${p.belop >= 0 ? "text-emerald-700" : "text-slate-800"}`}>{kr(p.belop)}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </td>
-                      </tr>
-                    )}
-                  </FragmentRad>
-                );
-              })}
-            </tbody>
-          </table>
+          <Kort overtittel="Kontantstrøm" tittel="Uke for uke" hoyre={<span className="text-xs text-slate-500">Klikk en uke for å se postene</span>}>
+            <div className="-mx-5 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+                    <th className="py-2 pl-5">Uke</th>
+                    <th className="text-right">Inn</th>
+                    <th className="text-right">Ut</th>
+                    <th className="text-right">Laveste saldo</th>
+                    <th className="text-right">Saldo ved ukeslutt</th>
+                    <th className="pr-5 text-right">Sannsynlighet</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {prognose.uker.map((u) => {
+                    const brudd = u.minSaldo < -prognose.ramme;
+                    return (
+                      <FragmentRad key={u.nr}>
+                        <tr
+                          onClick={() => setApenUke(apenUke === u.nr ? null : u.nr)}
+                          className={`tall cursor-pointer border-b border-slate-100 hover:bg-slate-50 ${brudd ? "bg-red-50/70" : ""}`}
+                        >
+                          <td className="py-2 pl-5">
+                            <span className="mr-2 text-slate-400">{apenUke === u.nr ? "▾" : "▸"}</span>
+                            {kortDato(u.fra)}
+                          </td>
+                          <td className="text-right text-emerald-700">{kr(u.inn)}</td>
+                          <td className="text-right text-slate-700">−{kr(u.ut)}</td>
+                          <td className={`text-right ${brudd ? "font-semibold text-red-600" : ""}`}>{kr(u.minSaldo)}</td>
+                          <td className="text-right font-medium">{kr(u.sluttSaldo)}</td>
+                          <td className={`pr-5 text-right ${u.sannsynlighet >= 0.5 ? "font-semibold text-red-600" : "text-slate-600"}`}>{prosent(u.sannsynlighet)}</td>
+                        </tr>
+                        {apenUke === u.nr && (
+                          <tr className="border-b border-slate-100 bg-slate-50">
+                            <td colSpan={6} className="px-5 py-2">
+                              <ul className="grid grid-cols-1 gap-x-8 gap-y-1 text-xs md:grid-cols-2">
+                                {oppsummerPoster(u.poster).map((p) => (
+                                  <li key={p.navn} className="flex justify-between gap-4">
+                                    <span className={p.kategori === "tiltak" || p.kategori === "factoring" ? "font-medium text-teal-800" : "text-slate-600"}>{p.navn}</span>
+                                    <span className={`tall ${p.belop >= 0 ? "text-emerald-700" : "text-slate-800"}`}>{kr(p.belop)}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </td>
+                          </tr>
+                        )}
+                      </FragmentRad>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Kort>
+          {venstre}
         </div>
-      </Kort>
+        {hoyre && <div className="space-y-6">{hoyre}</div>}
+      </div>
     </div>
   );
 }

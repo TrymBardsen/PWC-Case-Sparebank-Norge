@@ -86,128 +86,132 @@ export default async function Kundeside({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="space-y-6 xl:col-span-2">
-          <KundePrognose kunde={kunde} strompris={makro.stromNO5} />
-          {kunde.fakturaer && kunde.fakturaer.length > 0 && (
-            <Kort overtittel="Regnskapssystem" tittel="Utestående fakturaer" hoyre={<KildeTag kilde="Regnskapssystem" />}>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-                    <th className="py-1.5">Kunde</th>
-                    <th>Forfall</th>
-                    <th className="text-right">Dager over forfall</th>
-                    <th className="text-right">Beløp</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...kunde.fakturaer]
-                    .sort((a, b) => a.forfall.localeCompare(b.forfall))
-                    .map((f) => {
-                      const over = dagerMellom(f.forfall, DAGENS_DATO);
-                      return (
-                        <tr key={f.id} className="tall border-b border-slate-100 last:border-0">
-                          <td className="py-1.5">{f.debitor}</td>
-                          <td>{kortDato(f.forfall)}</td>
-                          <td className={`text-right ${over > 30 ? "font-semibold text-red-600" : over > 0 ? "text-orange-600" : "text-slate-400"}`}>{over > 0 ? over : "–"}</td>
-                          <td className="text-right">{kr(f.belop)}</td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            </Kort>
-          )}
-          <TekstSignaler kundeId={kunde.id} kilder={alleTekster(kunde)} analyse={v.tekstanalyse} debitorer={kunde.debitorer} />
-          <AiBrief kundeId={kunde.id} />
-        </div>
-
-        <div className="space-y-6">
-          <Kort overtittel="Forklarbar AI" tittel="Signaler bak varselet" hoyre={<span className="tall text-xs text-slate-500">{v.score} av 100 poeng</span>}>
-            <ScoreForklaring faktorer={v.faktorer} score={v.score} />
-            <ul className="space-y-3">
-              {faktorer.map((f) => (
-                <li key={f.id} className={f.poeng === 0 && !f.ukjent ? "opacity-45" : ""}>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-slate-900">{f.navn}</span>
-                    <span className="tall text-xs text-slate-500">
-                      {f.ukjent ? "?" : f.poeng}/{f.maks}
-                    </span>
-                  </div>
-                  <div className="my-1 h-1 overflow-hidden rounded-full bg-slate-100">
-                    <div className={`h-full ${f.ukjent ? "bg-slate-300" : "bg-teal-600"}`} style={{ width: `${f.ukjent ? 100 : (f.poeng / f.maks) * 100}%`, opacity: f.ukjent ? 0.4 : 1 }} />
-                  </div>
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-xs text-slate-600">{f.forklaring}</span>
-                    <KildeTag kilde={f.kilde} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </Kort>
-
-          <Kort overtittel="Personvern" tittel="Datagrunnlag og samtykke" hoyre={<SamtykkeMerke niva={kunde.samtykke} />}>
-            <ul className="space-y-2 text-sm">
-              <Datanivå pa tittel="1 · Bankdata og offentlige data" tekst="Konto og transaksjoner, kassekreditt, lån, sikkerheter, avviste betalinger, registerhendelser og SSB." />
-              <Datanivå
-                pa={kunde.samtykke >= 2}
-                tittel="2 · Regnskapssystem"
-                tekst={kunde.samtykke >= 2 ? `Reskontro og forfalt leverandørgjeld fra ${kunde.regnskapssystem ?? "regnskapssystemet"}.` : "Uten reskontro er prognosen bredere og vi ser ikke hvem som skylder penger."}
-              />
-              <Datanivå pa={kunde.samtykke >= 3} tittel="3 · Eierens privatøkonomi" tekst="Finnes ikke i datagrunnlaget (krever eget samtykke)." />
-            </ul>
-            {kunde.samtykke < 2 && (
-              <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                Tips: be om tilgang til regnskapssystemet. Usikkerheten i prognosen halveres, og kunden får factoring som mulig tiltak.
-              </p>
+      <KundePrognose
+        kunde={kunde}
+        strompris={makro.stromNO5}
+        venstre={
+          <>
+            {kunde.fakturaer && kunde.fakturaer.length > 0 && (
+              <Kort overtittel="Regnskapssystem" tittel="Utestående fakturaer" hoyre={<KildeTag kilde="Regnskapssystem" />}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+                      <th className="py-1.5">Kunde</th>
+                      <th>Forfall</th>
+                      <th className="text-right">Dager over forfall</th>
+                      <th className="text-right">Beløp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...kunde.fakturaer]
+                      .sort((a, b) => a.forfall.localeCompare(b.forfall))
+                      .map((f) => {
+                        const over = dagerMellom(f.forfall, DAGENS_DATO);
+                        return (
+                          <tr key={f.id} className="tall border-b border-slate-100 last:border-0">
+                            <td className="py-1.5">{f.debitor}</td>
+                            <td>{kortDato(f.forfall)}</td>
+                            <td className={`text-right ${over > 30 ? "font-semibold text-red-600" : over > 0 ? "text-orange-600" : "text-slate-400"}`}>{over > 0 ? over : "–"}</td>
+                            <td className="text-right">{kr(f.belop)}</td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </Kort>
             )}
-          </Kort>
-
-          {(eksponerte.length > 0 || avhengigAv.length > 0) && (
-            <Kort overtittel="Verdikjede" tittel="Nettverk i porteføljen" hoyre={<KildeTag kilde="Bankdata" />}>
-              <ul className="space-y-2 text-sm">
-                {eksponerte.map((s) => (
-                  <li key={s.til}>
-                    <Link href={`/kunde/${s.til}`} className="font-semibold text-snb-rod hover:underline">
-                      {navn(s.til)}
-                    </Link>{" "}
-                    får {prosent(s.andel)} av innbetalingene sine herfra. Rammes hvis {kunde.navn} sliter.
-                  </li>
-                ))}
-                {avhengigAv.map((s) => (
-                  <li key={s.fra}>
-                    {prosent(s.andel)} av innbetalingene kommer fra{" "}
-                    <Link href={`/kunde/${s.fra}`} className="font-semibold text-snb-rod hover:underline">
-                      {navn(s.fra)}
-                    </Link>
-                    , som nå betaler i snitt {s.forsinkelse} dager etter forfall.
+            <TekstSignaler kundeId={kunde.id} kilder={alleTekster(kunde)} analyse={v.tekstanalyse} debitorer={kunde.debitorer} />
+            <AiBrief kundeId={kunde.id} />
+          </>
+        }
+        hoyre={
+          <>
+            <Kort overtittel="Forklarbar AI" tittel="Signaler bak varselet" hoyre={<span className="tall text-xs text-slate-500">{v.score} av 100 poeng</span>}>
+              <ScoreForklaring faktorer={v.faktorer} score={v.score} />
+              <ul className="space-y-3">
+                {faktorer.map((f) => (
+                  <li key={f.id} className={f.poeng === 0 && !f.ukjent ? "opacity-45" : ""}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-slate-900">{f.navn}</span>
+                      <span className="tall text-xs text-slate-500">
+                        {f.ukjent ? "?" : f.poeng}/{f.maks}
+                      </span>
+                    </div>
+                    <div className="my-1 h-1 overflow-hidden rounded-full bg-slate-100">
+                      <div className={`h-full ${f.ukjent ? "bg-slate-300" : "bg-teal-600"}`} style={{ width: `${f.ukjent ? 100 : (f.poeng / f.maks) * 100}%`, opacity: f.ukjent ? 0.4 : 1 }} />
+                    </div>
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs text-slate-600">{f.forklaring}</span>
+                      <KildeTag kilde={f.kilde} />
+                    </div>
                   </li>
                 ))}
               </ul>
             </Kort>
-          )}
 
-          <Kort overtittel="Betalere" tittel="Kundens kunder" hoyre={<KildeTag kilde="Bankdata" />}>
-            <ul className="space-y-1.5 text-sm">
-              {kunde.debitorer.map((d) => (
-                <li key={d.navn} className="flex items-center justify-between gap-2">
-                  <span>{d.navn}</span>
-                  <span className="tall text-xs text-slate-500">
-                    {prosent(d.andelAvInnbetalinger)} ·{" "}
-                    {d.snittDagerForsinkelse === undefined ? (
-                      <span>forsinkelse ukjent</span>
-                    ) : (
-                      <span className={d.snittDagerForsinkelse > 20 ? "font-medium text-red-600" : ""}>{d.snittDagerForsinkelse} d forsinket</span>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Kort>
+            <Kort overtittel="Personvern" tittel="Datagrunnlag og samtykke" hoyre={<SamtykkeMerke niva={kunde.samtykke} />}>
+              <ul className="space-y-2 text-sm">
+                <Datanivå pa tittel="1 · Bankdata og offentlige data" tekst="Konto og transaksjoner, kassekreditt, lån, sikkerheter, avviste betalinger, registerhendelser og SSB." />
+                <Datanivå
+                  pa={kunde.samtykke >= 2}
+                  tittel="2 · Regnskapssystem"
+                  tekst={kunde.samtykke >= 2 ? `Reskontro og forfalt leverandørgjeld fra ${kunde.regnskapssystem ?? "regnskapssystemet"}.` : "Uten reskontro er prognosen bredere og vi ser ikke hvem som skylder penger."}
+                />
+                <Datanivå pa={kunde.samtykke >= 3} tittel="3 · Eierens privatøkonomi" tekst="Finnes ikke i datagrunnlaget (krever eget samtykke)." />
+              </ul>
+              {kunde.samtykke < 2 && (
+                <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  Tips: be om tilgang til regnskapssystemet. Usikkerheten i prognosen halveres, og kunden får factoring som mulig tiltak.
+                </p>
+              )}
+            </Kort>
 
-          <Oppfolging kundeId={kunde.id} notater={kunde.notater} radgiver={portefolje.radgiver} />
-        </div>
-      </div>
+            {(eksponerte.length > 0 || avhengigAv.length > 0) && (
+              <Kort overtittel="Verdikjede" tittel="Nettverk i porteføljen" hoyre={<KildeTag kilde="Bankdata" />}>
+                <ul className="space-y-2 text-sm">
+                  {eksponerte.map((s) => (
+                    <li key={s.til}>
+                      <Link href={`/kunde/${s.til}`} className="font-semibold text-snb-rod hover:underline">
+                        {navn(s.til)}
+                      </Link>{" "}
+                      får {prosent(s.andel)} av innbetalingene sine herfra. Rammes hvis {kunde.navn} sliter.
+                    </li>
+                  ))}
+                  {avhengigAv.map((s) => (
+                    <li key={s.fra}>
+                      {prosent(s.andel)} av innbetalingene kommer fra{" "}
+                      <Link href={`/kunde/${s.fra}`} className="font-semibold text-snb-rod hover:underline">
+                        {navn(s.fra)}
+                      </Link>
+                      , som nå betaler i snitt {s.forsinkelse} dager etter forfall.
+                    </li>
+                  ))}
+                </ul>
+              </Kort>
+            )}
+
+            <Kort overtittel="Betalere" tittel="Kundens kunder" hoyre={<KildeTag kilde="Bankdata" />}>
+              <ul className="space-y-1.5 text-sm">
+                {kunde.debitorer.map((d) => (
+                  <li key={d.navn} className="flex items-center justify-between gap-2">
+                    <span>{d.navn}</span>
+                    <span className="tall text-xs text-slate-500">
+                      {prosent(d.andelAvInnbetalinger)} ·{" "}
+                      {d.snittDagerForsinkelse === undefined ? (
+                        <span>forsinkelse ukjent</span>
+                      ) : (
+                        <span className={d.snittDagerForsinkelse > 20 ? "font-medium text-red-600" : ""}>{d.snittDagerForsinkelse} d forsinket</span>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Kort>
+
+            <Oppfolging kundeId={kunde.id} notater={kunde.notater} radgiver={portefolje.radgiver} />
+          </>
+        }
+      />
     </div>
   );
 }
