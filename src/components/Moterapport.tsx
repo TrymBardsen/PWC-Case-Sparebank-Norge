@@ -7,10 +7,37 @@ import { Kort } from "./ui";
 
 type Punkt = { tekst: string; kilder: { id: string; sitat: string }[] };
 
+// Sjekker at et lagret svar fortsatt passer skjemaet og dagens kildekatalog (sitater og tall)
+function stemmer(tekst: string, katalog: Katalogkilde[]): boolean {
+  try {
+    const r = RapportSchema.safeParse(lesSvar(tekst));
+    if (!r.success) return false;
+    const k = kontroller(r.data, katalog, {});
+    return !k.tallUtenKilde.length && !k.sitater.some((s) => s.status === "ikke funnet" || s.status === "ukjent kilde");
+  } catch {
+    return false;
+  }
+}
+
 // Valideringsfeil på norsk
 z.config(z.locales.no());
 
-export function Moterapport({ kundeId, kundenavn, dato, prompt, katalog }: { kundeId: string; kundenavn: string; dato: string; prompt: string; katalog: Katalogkilde[] }) {
+export function Moterapport({
+  kundeId,
+  kundenavn,
+  dato,
+  prompt,
+  katalog,
+  lagret,
+}: {
+  kundeId: string;
+  kundenavn: string;
+  dato: string;
+  prompt: string;
+  katalog: Katalogkilde[];
+  lagret?: { tekst: string; laget: string } | null; // ferdig forberedt rapport (data/rapporter), kontrollert på serveren
+}) {
+  const [forberedt, setForberedt] = useState<string | null>(null);
   const nokkel = `moterapport:${kundeId}`;
   const [svar, setSvar] = useState("");
   const [rapport, setRapport] = useState<Rapport | null>(null);
@@ -63,15 +90,21 @@ export function Moterapport({ kundeId, kundenavn, dato, prompt, katalog }: { kun
 
   useEffect(() => {
     try {
-      const lagret = localStorage.getItem(nokkel);
-      if (lagret) {
-        setSvar(lagret);
-        void valider(lagret);
+      // En rapport lagret i nettleseren brukes bare hvis den fortsatt stemmer med dagens kildekatalog
+      const lokal = localStorage.getItem(nokkel);
+      if (lokal && stemmer(lokal, katalog)) {
+        setSvar(lokal);
+        void valider(lokal);
+      } else if (lagret) {
+        // Ferdig forberedt rapport: vises med en gang, uten å vente på køen
+        setSvar(lagret.tekst);
+        setForberedt(lagret.laget);
+        void valider(lagret.tekst);
       }
     } catch {
       // Ikke kritisk
     }
-  }, [nokkel, valider]);
+  }, [nokkel, valider, lagret, katalog]);
 
   // «API-kall»: legger forespørselen i køen og venter på svar fra Claude
   async function generer() {
@@ -115,6 +148,7 @@ export function Moterapport({ kundeId, kundenavn, dato, prompt, katalog }: { kun
   }
 
   function nullstill() {
+    setForberedt(null);
     setRapport(null);
     setSvar("");
     setFeil([]);
@@ -230,6 +264,11 @@ export function Moterapport({ kundeId, kundenavn, dato, prompt, katalog }: { kun
 
       {rapport && kontroll && (
         <>
+          {forberedt && (
+            <p className="rounded-lg bg-teal-50 px-3 py-2 text-xs text-teal-900 print:hidden">
+              Ferdig forberedt rapport, laget {forberedt}. Sitater og tall er kontrollert mot dagens kildekatalog. Trykk «Ny rapport» for å lage en ny med Claude.
+            </p>
+          )}
           <Kontrollpanel rapport={rapport} kontroll={kontroll} webStatus={webStatus} onNy={nullstill} />
 
           <article className="mx-auto max-w-[210mm] rounded-lg border border-slate-200 bg-white p-8 text-[13px] leading-snug text-slate-800 print:max-w-none print:border-0 print:p-0 print:text-[11px]">

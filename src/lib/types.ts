@@ -15,6 +15,7 @@ export interface Lan {
   forfaltBelop: number;
   sluttdato?: string;
   sluttbetaling?: number; // restverdi som forfaller på sluttdato
+  forfallsdag?: number; // dag i måneden terminen betales (standard 20.)
 }
 
 export interface FasteKostnader {
@@ -162,6 +163,7 @@ export interface Kunde {
 
 export interface Portefolje {
   dagensDato: string;
-  radgiver: string;
+  radgiver: string; // standardrådgiver (Hanne)
+  radgivere: string[]; // alle rådgivere med kunder, standard først
   kunder: Kunde[];
 }

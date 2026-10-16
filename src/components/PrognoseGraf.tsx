@@ -56,7 +56,7 @@ export function PrognoseGraf({
   const min = Math.floor(raaMin / steg) * steg;
   const max = Math.ceil(raaMax / steg) * steg;
   const ticks = Array.from({ length: Math.round((max - min) / steg) + 1 }, (_, i) => min + i * steg);
-  const idag = prognose.dager[0].dato;
+  const idag = siste.dato; // siste faktiske saldo; prognosen starter dagen etter
   const brudd = prognose.tomKasseDato ? prognose.dager.find((d) => d.dato === prognose.tomKasseDato) : undefined;
 
   return (

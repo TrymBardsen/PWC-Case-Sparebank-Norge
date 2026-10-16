@@ -5,6 +5,8 @@ import "./globals.css";
 import { langDato } from "@/lib/dato";
 import { hentVurderinger, portefolje } from "@/lib/data";
 import { Faner } from "@/components/Faner";
+import { RadgiverVelger } from "@/components/RadgiverVelger";
+import { valgtRadgiver } from "@/lib/radgiver";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -14,10 +16,12 @@ export const metadata: Metadata = {
   description: "Tidligvarsling av likviditetsskvis for rådgivere i bedriftsmarkedet",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  // «Kundeanalyse» åpner kunden som trenger rådgiveren mest
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // «Kundeanalyse» åpner kunden i den valgte rådgiverens portefølje som trenger rådgiveren mest
+  const radgiver = await valgtRadgiver();
+  const mine = new Set(portefolje.kunder.filter((k) => k.radgiver === radgiver).map((k) => k.id));
   const { vurderinger } = hentVurderinger();
-  const toppKunde = [...vurderinger.values()].sort((a, b) => b.score - a.score)[0]?.kundeId;
+  const toppKunde = [...vurderinger.values()].filter((v) => mine.has(v.kundeId)).sort((a, b) => b.score - a.score)[0]?.kundeId;
 
   return (
     <html lang="nb">
@@ -36,8 +40,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           </div>
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-6 pb-4 text-sm text-slate-600">
             <span className="rounded-full bg-snb-rod-lys px-3 py-1 text-xs font-semibold text-snb-rod">Prototype · fiktive data</span>
-            <span>
-              {portefolje.radgiver}, bedriftsrådgiver · BM Bergen · {langDato(portefolje.dagensDato)}
+            <span className="inline-flex flex-wrap items-center gap-1">
+              <RadgiverVelger valgt={radgiver} radgivere={portefolje.radgivere} />, bedriftsrådgiver · BM Bergen · {langDato(portefolje.dagensDato)}
             </span>
           </div>
         </header>
@@ -50,8 +54,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </main>
 
         <footer data-skjul-i-mote className="mx-auto max-w-7xl border-t border-slate-200 px-6 py-5 text-xs text-slate-500 print:hidden">
-          Konseptprototype. Kundene (kundedata.json) og bankdataene (tilleggsdata.json) er fiktive og syntetiske. Konkursstatistikk (SSB), Enhetsregisteret,
-          styringsrente og strømpris er ekte, åpne data.
+          Konseptprototype, ikke et produksjonssystem. Kundene (kundedata.json) og bankdataene (tilleggsdata.json) er fiktive og syntetiske. Konkursstatistikk
+          (SSB), Enhetsregisteret, styringsrente og strømpris er ekte, åpne data; strømprisen merkes som reserveverdi når kilden ikke svarer. Score, prognose
+          og AI-utkast er beslutningsstøtte, ikke kredittbeslutninger.
         </footer>
       </body>
     </html>

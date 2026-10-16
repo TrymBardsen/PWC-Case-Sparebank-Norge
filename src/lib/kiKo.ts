@@ -8,20 +8,22 @@ import { join } from "node:path";
 
 const KO = join(process.cwd(), "data", "ki-ko");
 
+export type Oppgave = "moterapport" | "samtaleunderlag";
+
 export interface Foresporsel {
   jobbId: string;
   kundeId: string;
   opprettet: string;
-  oppgave: "moterapport";
+  oppgave: Oppgave;
   prompt: string;
 }
 
 const gyldigId = (id: string) => /^[A-Za-z0-9-]+$/.test(id);
 
-export function leggIKo(kundeId: string, prompt: string): Foresporsel {
+export function leggIKo(kundeId: string, prompt: string, oppgave: Oppgave = "moterapport"): Foresporsel {
   mkdirSync(KO, { recursive: true });
-  const jobbId = `${kundeId}-${Date.now()}`;
-  const f: Foresporsel = { jobbId, kundeId, opprettet: new Date().toISOString(), oppgave: "moterapport", prompt };
+  const jobbId = `${kundeId}-${oppgave === "samtaleunderlag" ? "su-" : ""}${Date.now()}`;
+  const f: Foresporsel = { jobbId, kundeId, opprettet: new Date().toISOString(), oppgave, prompt };
   writeFileSync(join(KO, `${jobbId}.foresporsel.json`), JSON.stringify(f, null, 1));
   // Prompten også som ren tekst, så den er lett å lese for den som svarer
   writeFileSync(join(KO, `${jobbId}.prompt.md`), prompt);

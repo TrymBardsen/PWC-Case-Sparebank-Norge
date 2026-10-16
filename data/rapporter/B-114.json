@@ -1,0 +1,202 @@
+{
+ "laget": "2026-10-16",
+ "merknad": "Ferdig forberedt møterapport for demoen. Lastes bare når sitater og tall stemmer med dagens kildekatalog.",
+ "rapport": {
+  "kundeId": "B-114",
+  "sammendrag": "Tindberg Tannklinikk har brukt opp hele kassekreditten, har ubetalt restskatt og fallende omsetning med underskudd. Prognosen viser at rammen er brukt opp 20. okt med 98 % sannsynlighet, og selv den anbefalte tiltakspakken holder ikke. Samtalen bør handle om en samlet plan, og banken bør vurdere spesialenhet.",
+  "situasjon": [
+   {
+    "tekst": "Kassekreditten på 1,5 MNOK er 100 % utnyttet, og den var overtrukket 2 dager siste 90 dager.",
+    "kilder": [
+     {
+      "id": "K-ENGASJEMENT",
+      "sitat": "Kassekreditt med ramme 1,5 MNOK, trekk i dag 1,5 MNOK (100 % utnyttet)."
+     },
+     {
+      "id": "F-OVERTREKK",
+      "sitat": "Kassekreditten var overtrukket 2 dager siste 90 dager."
+     }
+    ]
+   },
+   {
+    "tekst": "Omsetningen har falt fra 20 MNOK i 2023 til 18 MNOK i 2025, med driftsresultat på -1,3 MNOK og egenkapitalandel på 5 %.",
+    "kilder": [
+     {
+      "id": "K-REGNSKAP",
+      "sitat": "Omsetning 2023: 20 MNOK, 2024: 19 MNOK, 2025: 18 MNOK. Driftsresultat 2025: -1,3 MNOK. Egenkapitalandel: 5 %."
+     }
+    ]
+   },
+   {
+    "tekst": "Prognosen viser laveste saldo på -3,7 MNOK den 15. jan, og på det verste mangler 2 226 000 kr.",
+    "kilder": [
+     {
+      "id": "K-PROGNOSE",
+      "sitat": "Laveste saldo: -3,7 MNOK den 15. jan. Mangler 2 226 000 kr på det verste."
+     }
+    ]
+   },
+   {
+    "tekst": "Innbetalingene kommer fra kortterminal (75 %) og Vipps og privatkunder (25 %), så det finnes ingen kundefordringer å kreve inn eller selge.",
+    "kilder": [
+     {
+      "id": "K-BETALERE",
+      "sitat": "Kortoppgjer (terminal): 75 % av innbetalingene; Vipps-oppgjer og privatkundar: 25 % av innbetalingene"
+     }
+    ]
+   }
+  ],
+  "risikoer": [
+   {
+    "tekst": "Rammen er brukt opp 20. okt, utløst av lønn på 411 000 kr, med 98 % sannsynlighet.",
+    "alvor": "høy",
+    "kilder": [
+     {
+      "id": "F-TOMKASSE",
+      "sitat": "Rammen er brukt opp 20. okt (denne uken), utløst av lønn på 411 000 kr. Sannsynlighet 98 %."
+     }
+    ]
+   },
+   {
+    "tekst": "Kunden skylder 421 000 kr i ubetalt restskatt, og en inkassosak fra leverandør er registrert.",
+    "alvor": "høy",
+    "kilder": [
+     {
+      "id": "F-RESTANSER",
+      "sitat": "Skylder det offentlige 421 000 kr i ubetalt restskatt."
+     },
+     {
+      "id": "H-0281",
+      "sitat": "Inkassosak frå leverandør registrert."
+     }
+    ]
+   },
+   {
+    "tekst": "3 betalinger er avvist for manglende dekning, og 1 termin på lånet er forfalt (33 000 kr).",
+    "alvor": "høy",
+    "kilder": [
+     {
+      "id": "F-AVVISTE",
+      "sitat": "3 betalinger avvist pga. manglende dekning siste 90 dager."
+     },
+     {
+      "id": "F-TERMINER",
+      "sitat": "1 forfalt termin (33 000 kr)."
+     }
+    ]
+   },
+   {
+    "tekst": "Med driftsmargin på -7 % og egenkapital på 5 % er det lite å tære på.",
+    "alvor": "middels",
+    "kilder": [
+     {
+      "id": "H-0279",
+      "sitat": "Driftsmargin -7 %, eigenkapital 5 %."
+     }
+    ]
+   }
+  ],
+  "muligheter": [],
+  "bransjeOgMarked": [
+   {
+    "tekst": "SSB viser 4 konkurser i helsetjenester i Vestland de siste fire kvartalene (0,9 per 1000 bedrifter), uendret mot året før.",
+    "kilder": [
+     {
+      "id": "K-BRANSJE",
+      "sitat": "Helsetjenester: 4 konkurser i Vestland siste fire kvartaler (0,9 per 1000 bedrifter, +0 % mot året før)."
+     }
+    ]
+   },
+   {
+    "tekst": "Norges Bank satte styringsrenten opp fra 4,25 til 4,50 prosent, som gjør kassekreditten og lånet dyrere.",
+    "kilder": [
+     {
+      "id": "W1",
+      "sitat": "Komiteen besluttet å sette styringsrenten opp fra 4,25 til 4,50 prosent."
+     }
+    ]
+   },
+   {
+    "tekst": "Nasjonalt ble det åpnet 1 012 konkurser i fjerde kvartal 2025, lavere enn 1 199 i fjerde kvartal 2024.",
+    "kilder": [
+     {
+      "id": "W2",
+      "sitat": "I fjerde kvartal 2025 vart det opna 1 012 konkursar. Det er ein auke frå 911 i tredje kvartal, men lågare enn i fjerde kvartal 2024, då det vart registrert 1 199 konkursar."
+     }
+    ]
+   }
+  ],
+  "sporsmal": [
+   "Hvordan har pasientvolumet og timeboken utviklet seg det siste året?",
+   "Hvordan har dere tenkt å betale lønnen 20. oktober?",
+   "Har dere kontakt med Skatteetaten om restskatten, og hva er status for inkassosaken?",
+   "Hvilke kostnader kan reduseres raskt uten at det går ut over pasientene?",
+   "Kan eier eller andre bidra med kapital, og i så fall når?"
+  ],
+  "anbefaltTiltak": [
+   {
+    "tiltak": "Samlet plan og spesialenhet",
+    "tekst": "Selv den anbefalte pakken gir margin på −1 038 000 kr og 84 % sannsynlighet, så kunden trenger en samlet plan utover enkelttiltak.",
+    "kilder": [
+     {
+      "id": "T-PAKKE",
+      "sitat": "Margin etter pakken: −1 038 000 kr. Sannsynlighet: 84 %."
+     }
+    ]
+   },
+   {
+    "tiltak": "Gjør kassekreditt om til nedbetalingslån",
+    "tekst": "Største enkelttiltak: 0,8 MNOK flyttes til et 5-årig lån og bedrer det laveste punktet med 710 000 kr, men er en betalingslettelse.",
+    "kilder": [
+     {
+      "id": "T-KKTILLAN",
+      "sitat": "0,8 MNOK av trukket kassekreditt flyttes til et 5-årig lån (antatt rente 7,5 %)."
+     },
+     {
+      "id": "T-KKTILLAN",
+      "sitat": "Effekt på laveste punkt: 710 000 kr. Sannsynlighet etter tiltak: 93 %. Er en betalingslettelse."
+     }
+    ]
+   },
+   {
+    "tiltak": "Kostnadstiltak",
+    "tekst": "10 % kutt i innkjøp og variable kostnader fra uke 3 er kundens egen del av planen, med effekt på 282 000 kr.",
+    "kilder": [
+     {
+      "id": "T-KOSTNADSKUTT",
+      "sitat": "10 % kutt i innkjøp og variable kostnader fra uke 3"
+     },
+     {
+      "id": "T-KOSTNADSKUTT",
+      "sitat": "Effekt på laveste punkt: 282 000 kr."
+     }
+    ]
+   }
+  ],
+  "varsomhet": null,
+  "ikkeKjent": [
+   "Om det finnes en betalingsavtale med Skatteetaten om restskatten.",
+   "Hvorfor omsetningen faller, og om pasientgrunnlaget er stabilt.",
+   "Hva som skjer med nedbetalingslånet når det går ut, og om det skal refinansieres.",
+   "Eierens mulighet til å skyte inn kapital (krever eget samtykke)."
+  ],
+  "webkilder": [
+   {
+    "id": "W1",
+    "url": "https://www.norges-bank.no/aktuelt/nyheter/Pressemeldinger/2026/2026-09-24-rente/",
+    "tittel": "Styringsrenten settes opp til 4,50 prosent",
+    "utgiver": "Norges Bank",
+    "publisert": "2026-09-24",
+    "sitat": "Komiteen besluttet å sette styringsrenten opp fra 4,25 til 4,50 prosent."
+   },
+   {
+    "id": "W2",
+    "url": "https://www.ssb.no/virksomheter-foretak-og-regnskap/konkurser/statistikk/opna-konkursar/artikler/fleire-opne-konkursar-i-fjerde-kvartal-2025",
+    "tittel": "Fleire opne konkursar i fjerde kvartal 2025",
+    "utgiver": "Statistisk sentralbyrå (SSB)",
+    "publisert": "2026-01-28",
+    "sitat": "I fjerde kvartal 2025 vart det opna 1 012 konkursar. Det er ein auke frå 911 i tredje kvartal, men lågare enn i fjerde kvartal 2024, då det vart registrert 1 199 konkursar."
+   }
+  ]
+ }
+}

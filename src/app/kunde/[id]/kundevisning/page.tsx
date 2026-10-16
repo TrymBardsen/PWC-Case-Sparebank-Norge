@@ -4,15 +4,17 @@ import { hentKunde } from "@/lib/data";
 import { hentMakro } from "@/lib/makro";
 import { DAGENS_DATO, langDato } from "@/lib/dato";
 import { mnok, prosent } from "@/lib/format";
-import { KundePrognose } from "@/components/KundePrognose";
+import { KundeMote } from "@/components/KundeMote";
+import { valgtRadgiver } from "@/lib/radgiver";
 
-// Kundevisning (startes med «Start kundemøte» under Forbered samtale): skjermen rådgiveren viser kunden. Bare kundens egne tall, prognose og tiltak.
+// Kundevisning (startes med «Start kundemøte» på kundesiden): skjermen rådgiveren viser kunden. Bare kundens egne tall, prognose og tiltak.
 // Ingen risikoscore, risikoklasse, tekstsignaler, notater eller andre kunder i banken.
 export default async function Kundevisning({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const kunde = hentKunde(id);
   if (!kunde) notFound();
   const makro = await hentMakro();
+  const radgiver = await valgtRadgiver();
   const trekk = kunde.kassekredittTrekk[kunde.kassekredittTrekk.length - 1];
 
   return (
@@ -38,18 +40,17 @@ export default async function Kundevisning({ params }: { params: Promise<{ id: s
       </div>
 
       <p className="max-w-3xl text-[15px] text-slate-700">
-        Prognosen viser forventet saldo på driftskontoen inkludert kassekreditten de neste 13 ukene. Den bygger på kontoen og betalingene deres i banken
-        {kunde.samtykke >= 2 ? ` og reskontro fra ${kunde.regnskapssystem ?? "regnskapssystemet"}` : ""}: lønn, skatt, MVA, husleie og lån på forfallsdato, og
-        inn- og utbetalinger fra samme periode i fjor. Vi kan prøve ulike tiltak sammen og se effekten med en gang.
+        Dette er et anslag over de neste 13 ukene, basert på kontoen og betalingene deres i banken
+        {kunde.samtykke >= 2 ? ` og tall fra ${kunde.regnskapssystem ?? "regnskapssystemet"}` : ""}. Vi kan prøve tiltak sammen og se effekten med en gang.
       </p>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Boks tittel="Kassekreditt" verdi={mnok(kunde.kassekredittRamme)} under={kunde.kassekredittRamme > 0 ? `${mnok(trekk)} brukt i dag (${prosent(trekk / kunde.kassekredittRamme)})` : "Ingen kassekreditt"} />
         <Boks tittel="Lån og leasing" verdi={mnok(kunde.lan.reduce((s, l) => s + l.saldo, 0))} under={kunde.lan.map((l) => l.navn).join(", ") || "Ingen lån"} />
-        <Boks tittel="Saldo i dag" verdi={mnok(kunde.dagligSaldo[kunde.dagligSaldo.length - 1].saldo)} under="Driftskonto minus trekk på kassekreditt" />
+        <Boks tittel="Saldo i dag" verdi={mnok(kunde.dagligSaldo[kunde.dagligSaldo.length - 1].saldo)} under="Driftskonto minus det som er brukt av kassekreditten" />
       </div>
 
-      <KundePrognose kunde={kunde} strompris={makro.stromNO5} mote />
+      <KundeMote kunde={kunde} radgiver={radgiver} strompris={makro.stromNO5} stromLive={makro.live.strom} />
     </div>
   );
 }

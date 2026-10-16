@@ -568,7 +568,18 @@ function reskontroFor(b: Bedrift, sim: ReturnType<typeof simuler>, r: () => numb
       fordringar.push({ debitor: bet.namn, belop_knok: rund(total / antal), fakturadato, forfall: plussDagar(fakturadato, 30), snitt_dagar_etter_forfall: forsinking });
     }
   }
-  return { kundefordringar: fordringar.sort((a, c) => a.forfall.localeCompare(c.forfall)), leverandorgjeld_forfalt_knok: rund(r() * 80), skatt_mva_restanse_knok: restanseFor(b) };
+  return {
+    kundefordringar: fordringar.sort((a, c) => a.forfall.localeCompare(c.forfall)),
+    leverandorgjeld_forfalt_knok: leverandorgjeldFor(b) ?? rund(r() * 80),
+    skatt_mva_restanse_knok: restanseFor(b),
+  };
+}
+// Forfalt leverandørgjeld som er nemnd i eit møtenotat («… 1,2 mill. i forfalt leverandørgjeld»)
+function leverandorgjeldFor(b: Bedrift): number | undefined {
+  const r = hend(b.kunde_id)
+    .map((h) => h.hending.match(/([\d,]+) mill\. i forfalt leverandørgjeld/))
+    .find((x) => x);
+  return r ? Number(r[1].replace(",", ".")) * 1000 : undefined;
 }
 function restanseFor(b: Bedrift) {
   const h = hend(b.kunde_id).find((x) => x.kategori === "Betalingsanmerkning");
@@ -605,6 +616,8 @@ const samtykke: Record<string, { rekneskapsdata: boolean; system: string | null;
 const reskontro: Record<string, ReturnType<typeof reskontroFor>> = {};
 
 const SYSTEM = ["Tripletex", "Fiken", "Visma eAccounting", "PowerOffice Go"];
+// Kunder som alltid har gitt tilgang til regnskapsdata (demoeksempel). Andre trekkes tilfeldig.
+const SAMTYKKE_ALLTID = new Set(["B-102"]);
 for (const b of data.Bedrifter) {
   const sim = simuler(b);
   const r = rng(b.kunde_id + "-ekstra");
@@ -647,7 +660,7 @@ for (const b of data.Bedrifter) {
   }
   if (sim.m.kkBand && r() < 0.5) avvisteBetalingar.push({ kunde_id: b.kunde_id, dato: plussDagar(PER_DATO, -Math.round(10 + r() * 60)), belop_knok: rund(30 + r() * 100), mottakar: "Leverandør", arsak: "Manglande dekning" });
 
-  const gitt = r() < 0.45;
+  const gitt = r() < 0.45 || SAMTYKKE_ALLTID.has(b.kunde_id);
   samtykke[b.kunde_id] = { rekneskapsdata: gitt, system: gitt ? SYSTEM[Math.floor(r() * SYSTEM.length)] : null, gitt: gitt ? plussDagar("2025-01-01", Math.round(r() * 600)) : null };
   if (gitt) reskontro[b.kunde_id] = reskontroFor(b, sim, r);
 }
