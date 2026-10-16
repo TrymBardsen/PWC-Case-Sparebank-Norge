@@ -1,6 +1,8 @@
 import "server-only";
+import { tolkRente, tolkStrom } from "./makroTolk.ts";
 
-// Ekte, åpne makrodata. Faller tilbake til sist kjente verdi hvis API-et er nede.
+// Ekte, åpne makrodata. Hvis API-et er nede eller svarer uventet, brukes en reserveverdi
+// som er merket med live: false og ikke skal presenteres som dagens verdi.
 
 export interface Makro {
   styringsrente: number; // prosent
@@ -10,50 +12,38 @@ export interface Makro {
   live: { rente: boolean; strom: boolean };
 }
 
+// Omtrentlige verdier for demo når kildene ikke svarer. Ikke ferske data.
 const RESERVE: Makro = {
   styringsrente: 4.5,
-  styringsrenteDato: "2026-10-14",
+  styringsrenteDato: "reserveverdi",
   stromNO5: 1.45,
-  stromDato: "2026-10-15",
+  stromDato: "reserveverdi",
   live: { rente: false, strom: false },
 };
 
-async function hentRente(): Promise<{ verdi: number; dato: string } | null> {
+async function hentJson(url: string): Promise<unknown> {
   try {
-    const res = await fetch("https://data.norges-bank.no/api/data/IR/B.KPRA.SD.R?format=sdmx-json&lastNObservations=1&locale=no", {
-      next: { revalidate: 3600 },
-      signal: AbortSignal.timeout(4000),
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    const serie = Object.values(json.data.dataSets[0].series)[0] as { observations: Record<string, string[]> };
-    const verdi = Number(Object.values(serie.observations)[0][0]);
-    const dato = json.data.structure.dimensions.observation[0].values[0].id as string;
-    return Number.isFinite(verdi) ? { verdi, dato } : null;
-  } catch {
-    return null;
-  }
-}
-
-async function hentStrom(): Promise<{ verdi: number; dato: string } | null> {
-  const iDag = new Date().toISOString().slice(0, 10);
-  const [aar, mnd, dag] = iDag.split("-");
-  try {
-    const res = await fetch(`https://www.hvakosterstrommen.no/api/v1/prices/${aar}/${mnd}-${dag}_NO5.json`, {
-      next: { revalidate: 3600 },
-      signal: AbortSignal.timeout(4000),
-    });
-    if (!res.ok) return null;
-    const timer = (await res.json()) as { NOK_per_kWh: number }[];
-    if (!timer.length) return null;
-    return { verdi: timer.reduce((s, t) => s + t.NOK_per_kWh, 0) / timer.length, dato: iDag };
-  } catch {
+    const res = await fetch(url, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(4000) });
+    if (!res.ok) {
+      console.warn(`Makrodata: ${new URL(url).host} svarte HTTP ${res.status}`);
+      return null;
+    }
+    return await res.json();
+  } catch (e) {
+    console.warn(`Makrodata: ${new URL(url).host} utilgjengelig (${e instanceof Error ? e.name : "ukjent"})`);
     return null;
   }
 }
 
 export async function hentMakro(): Promise<Makro> {
-  const [rente, strom] = await Promise.all([hentRente(), hentStrom()]);
+  const iDag = new Date().toISOString().slice(0, 10);
+  const [aar, mnd, dag] = iDag.split("-");
+  const [renteJson, stromJson] = await Promise.all([
+    hentJson("https://data.norges-bank.no/api/data/IR/B.KPRA.SD.R?format=sdmx-json&lastNObservations=1&locale=no"),
+    hentJson(`https://www.hvakosterstrommen.no/api/v1/prices/${aar}/${mnd}-${dag}_NO5.json`),
+  ]);
+  const rente = renteJson === null ? null : tolkRente(renteJson);
+  const strom = stromJson === null ? null : tolkStrom(stromJson, iDag);
   return {
     styringsrente: rente?.verdi ?? RESERVE.styringsrente,
     styringsrenteDato: rente?.dato ?? RESERVE.styringsrenteDato,

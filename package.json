@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "NEXT_PUBLIC_DEMO_DATO=2026-10-01 node --conditions=react-server --test tests/*.test.ts",
     "sjekk": "node scripts/sjekk.ts",
     "tekstsignaler": "node --env-file-if-exists=.env.local scripts/tekstsignaler.ts",
     "ssb": "node scripts/hent-ssb.ts",

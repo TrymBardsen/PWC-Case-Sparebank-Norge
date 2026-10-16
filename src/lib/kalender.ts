@@ -1,5 +1,4 @@
-// Kjente, forutsigbare utbetalinger. Brukes både av datageneratoren (historikk)
-// og av prognosemotoren (de neste 13 ukene).
+// Kjente, forutsigbare utbetalinger de neste 13 ukene (brukes av prognosemotoren).
 
 import type { Kunde } from "./types.ts";
 import { leggTilDager, tilDato } from "./dato.ts";
@@ -27,6 +26,8 @@ const SKATT_MANEDER = [0, 2, 4, 6, 8, 10]; // forskuddstrekk og AGA forfaller 15
 
 export interface KalenderValg {
   estimertInnPerMnd: number;
+  // Anslått innbetaling for en bestemt måned uten historikk (brukes foran estimertInnPerMnd)
+  estimertInnForMaaned?: (aar: number, mnd: number) => number;
   // Faktiske innbetalinger for en måned (år, 0-indeksert måned) når de er kjent
   innForMaaned?: (aar: number, mnd: number) => number | undefined;
   stromFaktor?: number; // 1 = dagens pris
@@ -94,7 +95,8 @@ export function kjentePoster(kunde: Kunde, fra: string, til: string, valg: Kalen
         // Terminen dekker de to månedene som slutter to måneder før forfall
         const grunnlag = [3, 2].reduce((sum, tilbake) => {
           const t = new Date(Date.UTC(d.getUTCFullYear(), mnd - tilbake, 1));
-          return sum + (valg.innForMaaned?.(t.getUTCFullYear(), t.getUTCMonth()) ?? valg.estimertInnPerMnd);
+          const [a, m] = [t.getUTCFullYear(), t.getUTCMonth()];
+          return sum + (valg.innForMaaned?.(a, m) ?? valg.estimertInnForMaaned?.(a, m) ?? valg.estimertInnPerMnd);
         }, 0);
         poster.push({
           dato: iso,
@@ -110,18 +112,19 @@ export function kjentePoster(kunde: Kunde, fra: string, til: string, valg: Kalen
         poster.push({ dato: iso, navn: `${lan.navn}: sluttbetaling`, belop: lan.sluttbetaling!, kategori: "lan" });
       }
     }
-    if (dag === 20) {
-      for (const lan of kunde.lan) {
-        if (lan.sluttdato && iso > lan.sluttdato) continue;
-        const rente = Math.round((lan.saldo * (lan.rentesats + renteTillegg)) / 12);
-        const avdrag = valg.utenAvdrag ? 0 : lan.avdragPerMnd;
-        poster.push({
-          dato: iso,
-          navn: valg.utenAvdrag ? `${lan.navn}: kun renter` : `${lan.navn}: termin`,
-          belop: rente + avdrag,
-          kategori: "lan",
-        });
-      }
+    for (const lan of kunde.lan) {
+      if (dag !== (lan.forfallsdag ?? 20)) continue;
+      // Lån som går ut i perioden: ingen terminer etter sluttdato. Lån som har passert
+      // sluttdato før perioden, men fortsatt har saldo, betjenes som før til de er avklart.
+      if (lan.sluttdato && iso > lan.sluttdato && lan.sluttdato >= fra) continue;
+      const rente = Math.round((lan.saldo * (lan.rentesats + renteTillegg)) / 12);
+      const avdrag = valg.utenAvdrag ? 0 : lan.avdragPerMnd;
+      poster.push({
+        dato: iso,
+        navn: valg.utenAvdrag ? `${lan.navn}: kun renter` : `${lan.navn}: termin`,
+        belop: rente + avdrag,
+        kategori: "lan",
+      });
     }
   }
   return poster;

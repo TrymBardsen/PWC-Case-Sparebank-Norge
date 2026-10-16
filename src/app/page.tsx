@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { hentVurderinger, portefolje } from "@/lib/data";
-import { dagerSiden, kortDato } from "@/lib/dato";
+import { dagerSiden, kortDato, visDatoer } from "@/lib/dato";
 import { kr, mnok, omUker, prosent } from "@/lib/format";
-import { AiBoks, Kort, NivaPille, Nokkeltall, SamtykkeMerke, Utnyttelse } from "@/components/ui";
+import { AiBoks, Kort, Nokkeltall } from "@/components/ui";
 import { hentMakro } from "@/lib/makro";
 import { vurderGronn, type GronnVurdering } from "@/lib/gronn";
 import { lagAgenda } from "@/lib/agenda";
@@ -10,22 +10,30 @@ import { Agenda } from "@/components/Agenda";
 import { PortefoljeModus } from "@/components/PortefoljeModus";
 import { NyttSidenSist } from "@/components/NyttSidenSist";
 import { Minigraf } from "@/components/Minigraf";
+import { MuligheterIPorteforljen } from "@/components/Muligheter";
+import { muligheterFor } from "@/lib/muligheter";
 import type { Kunde } from "@/lib/types";
+import { Portefoljetabell, type Rad } from "@/components/Portefoljetabell";
+import { Seksjon } from "@/components/Seksjon";
+import { antall } from "@/lib/format";
+import { mineKunder } from "@/lib/radgiver";
 
 // Dynamisk, så lagrede tekstanalyser slår inn i scoren med en gang
 export const dynamic = "force-dynamic";
 
-export default async function Portefoljeside({ searchParams }: { searchParams: Promise<{ alle?: string }> }) {
-  const visAlle = (await searchParams).alle === "1";
+export default async function Portefoljeside() {
+  // Scoren beregnes for hele porteføljen (smitte går på tvers), men siden viser den valgte rådgiverens kunder
   const { vurderinger, smitte } = hentVurderinger();
+  const { radgiver, kunder } = await mineKunder();
+  const mine = new Set(kunder.map((k) => k.id));
   const makro = await hentMakro();
   const gronn = new Map<string, GronnVurdering>();
-  for (const k of portefolje.kunder) {
+  for (const k of kunder) {
     const g = vurderGronn(k, makro.stromNO5);
     if (g) gronn.set(k.id, g);
   }
-  const agenda = lagAgenda(portefolje.kunder, vurderinger, smitte, gronn);
-  const rader = portefolje.kunder
+  const agenda = lagAgenda(kunder, vurderinger, smitte, gronn);
+  const rader = kunder
     .map((k) => ({ k, v: vurderinger.get(k.id)! }))
     .sort((a, b) => b.v.score - a.v.score);
 
@@ -33,13 +41,14 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
   const hoye = rader.filter((r) => r.v.niva === "Høy").length;
   const tomInnen8 = rader.filter((r) => r.v.prognose.ukerTilTomKasse !== null && r.v.prognose.ukerTilTomKasse <= 8).length;
   const glemte = rader.filter((r) => (dagerSiden(r.k.sisteKontakt) ?? Infinity) > 365).length;
-  const totalRamme = portefolje.kunder.reduce((s, k) => s + k.kassekredittRamme, 0);
+  const totalRamme = kunder.reduce((s, k) => s + k.kassekredittRamme, 0);
   const totalBrukt = rader.reduce((s, r) => s + r.k.kassekredittTrekk[r.k.kassekredittTrekk.length - 1], 0);
-  const aktivSmitte = smitte.filter((s) => (vurderinger.get(s.fra)?.score ?? 0) >= 50);
+  const aktivSmitte = smitte.filter((s) => (vurderinger.get(s.fra)?.score ?? 0) >= 50 && (mine.has(s.fra) || mine.has(s.til)));
+  const muligheter = kunder.flatMap((k) => muligheterFor(k, vurderinger.get(k.id)!));
 
   const medAi = (
     <div className="space-y-6">
-      <Agenda oppgaver={agenda} radgiver={portefolje.radgiver} />
+      <Agenda oppgaver={agenda} radgiver={radgiver} kunder={kunder.map((k) => ({ id: k.id, navn: k.navn, dagligLeder: k.dagligLeder }))} />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <Nokkeltall tittel="Kritisk" verdi={kritiske} under="Score 50 eller høyere" />
@@ -49,7 +58,6 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
         <Nokkeltall tittel="Kassekreditt brukt" verdi={`${Math.round((totalBrukt / totalRamme) * 100)} %`} under={`${mnok(totalBrukt)} av ${mnok(totalRamme)}`} />
       </div>
 
-      <NyttSidenSist kunder={portefolje.kunder} vurderinger={vurderinger} />
 
       <AiBoks etikett="Ukens oppsummering:">
         {(() => {
@@ -57,115 +65,56 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
           const motpart = rader.filter((r) => r.k.motpart).map((r) => r.k.navn);
           const sensitive = rader.filter((r) => r.k.sensitiv).map((r) => r.k.navn);
           return [
-            kritiskeNavn.length ? `${kritiskeNavn.length} kunder er kritiske, og ${kritiskeNavn[0]} har høyest risiko og bør kontaktes i dag.` : "Ingen kunder er kritiske nå.",
+            kritiskeNavn.length
+              ? `${antall(kritiskeNavn.length, "kunde er kritisk", "kunder er kritiske")}, og ${kritiskeNavn[0]} har høyest risiko og bør kontaktes i dag.`
+              : "Ingen kunder er kritiske nå.",
             motpart.length ? `${motpart.join(" og ")} er avhengige av en motpart som har fått betalingsanmerkning.` : "",
             sensitive.length ? `${sensitive.join(" og ")} er i en sensitiv situasjon og er tatt ut av agendaen.` : "",
+            muligheter.length
+              ? `${antall(new Set(muligheter.map((m) => m.kundeId)).size, "kunde har", "kunder har")} en god grunn til kontakt, blant annet ${antall(muligheter.filter((m) => m.type === "kontrakt").length, "ny offentlig kontrakt", "nye offentlige kontrakter")} og ${antall(muligheter.filter((m) => m.type === "vekst").length, "kunde", "kunder")} der veksten binder likviditet.`
+              : "",
           ]
             .filter(Boolean)
             .join(" ");
         })()}
       </AiBoks>
 
-      <Kort
-        overtittel={`Sortert etter risikoscore · ${visAlle ? `alle ${rader.length}` : `topp ${Math.min(30, rader.length)} av ${rader.length}`} kunder`}
-        tittel="Varsler i porteføljen"
-        hoyre={
-          <Link href={visAlle ? "/" : "/?alle=1"} className="text-sm font-semibold text-snb-rod hover:underline">
-            {visAlle ? "Vis bare de 30 viktigste" : `Vis alle ${rader.length}`}
-          </Link>
-        }
-      >
-        <div className="-mx-6 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-snb-gronn text-left text-[13px] font-semibold text-white">
-                <th className="py-3 pl-6 pr-3">Kunde</th>
-                <th className="px-3 py-3">Risikoscore</th>
-                <th className="px-3 py-3">
-                  Saldo
-                  <span className="block text-[11px] font-normal opacity-80">90 dager + prognose</span>
-                </th>
-                <th className="px-3 py-3">Tid til skvis</th>
-                <th className="px-3 py-3">Viktigste signal</th>
-                <th className="px-3 py-3">Kassekreditt</th>
-                <th className="px-3 py-3">Siste kontakt</th>
-                <th className="py-3 pr-6 pl-3">Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(visAlle ? rader : rader.slice(0, 30)).map(({ k, v }) => {
-                const toppFaktorer = [...v.faktorer].filter((f) => f.poeng > 0).sort((a, b) => b.poeng - a.poeng).slice(0, 2);
-                const dager = dagerSiden(k.sisteKontakt);
-                return (
-                  <tr key={k.id} className="group border-b border-slate-200 align-top last:border-0 even:bg-snb-gra/60 hover:bg-snb-gra">
-                    <td className="min-w-56 py-4 pl-6 pr-3">
-                      <Link href={`/kunde/${k.id}`} className="font-overskrift text-[15px] font-bold text-slate-900 group-hover:text-snb-rod">
-                        {k.navn}
-                      </Link>
-                      <div className="text-xs text-slate-500">
-                        {k.bransje} · {k.adresse}
-                        {k.sesongbedrift ? " · sesongbedrift" : ""}
-                      </div>
-                      {k.sensitiv && (
-                        <div className="mt-1 inline-block rounded-full bg-snb-gronn-lys px-2 py-0.5 text-[10px] font-semibold text-snb-gronn" title={k.sensitiv}>
-                          Sensitiv situasjon – kun praktisk kontakt
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-3 py-4">
-                      <span className="flex items-center gap-2 whitespace-nowrap">
-                        <span className="tall w-6 text-right font-overskrift text-base font-bold text-slate-900">{v.score}</span>
-                        <NivaPille niva={v.niva} />
-                      </span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <Minigraf historikk={k.dagligSaldo} prognose={v.prognose} />
-                    </td>
-                    <td className="tall px-3 py-4 whitespace-nowrap">
-                      {v.prognose.tomKasseDato ? (
-                        <span className={v.prognose.ukerTilTomKasse! <= 2 ? "font-semibold text-snb-rod" : "font-medium text-red-700"}>
-                          {omUker(v.prognose.ukerTilTomKasse!)}
-                          <span className="block text-xs font-normal text-slate-500">
-                            {kortDato(v.prognose.tomKasseDato)} · {prosent(v.prognose.sannsynlighetInsolvens)}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="text-slate-500">
-                          13+ uker
-                          {v.prognose.sannsynlighetInsolvens >= 0.1 && (
-                            <span className="block text-xs text-red-700">{prosent(v.prognose.sannsynlighetInsolvens)} sannsynlighet</span>
-                          )}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-4 text-[13px] text-slate-700">
-                      {toppFaktorer.length ? (
-                        <>
-                          <span className="line-clamp-2" title={toppFaktorer[0].forklaring}>
-                            {toppFaktorer[0].forklaring}
-                          </span>
-                          {toppFaktorer[1] && <span className="mt-0.5 block text-xs text-slate-500">Også: {toppFaktorer[1].navn.toLowerCase()}</span>}
-                        </>
-                      ) : (
-                        <span className="text-slate-400">Ingen signaler</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <Utnyttelse andel={v.kkUtnyttelse} />
-                    </td>
-                    <td className={`tall px-3 py-4 text-xs whitespace-nowrap ${dager === null || dager > 365 ? "font-semibold text-red-700" : "text-slate-600"}`}>
-                      {dager === null ? "Ingen registrert" : `${dager} dager siden`}
-                    </td>
-                    <td className="py-4 pr-6 pl-3 whitespace-nowrap">
-                      <SamtykkeMerke niva={k.samtykke} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Kort>
+      <Portefoljetabell
+        rader={rader.map(({ k, v }): Rad => {
+          const p = v.prognose;
+          const topp = [...v.faktorer].filter((f) => f.poeng > 0).sort((a, b) => b.poeng - a.poeng).slice(0, 2);
+          return {
+            id: k.id,
+            navn: k.navn,
+            undertekst: `${k.bransje} · ${k.adresse}${k.sesongbedrift ? " · sesongbedrift" : ""}`,
+            sensitiv: k.sensitiv,
+            score: v.score,
+            niva: v.niva,
+            bransje: k.bransje,
+            tid: p.tomKasseDato
+              ? {
+                  tekst: omUker(p.ukerTilTomKasse!),
+                  under: `${kortDato(p.tomKasseDato)} · ${antall(p.dagerUnderGrensen, "dag", "dager")} under · ${prosent(p.sannsynlighetInsolvens)}`,
+                  stil: p.ukerTilTomKasse! <= 2 ? "font-semibold text-snb-rod" : "font-medium text-red-700",
+                }
+              : { tekst: "13+ uker", under: p.sannsynlighetInsolvens >= 0.1 ? `${prosent(p.sannsynlighetInsolvens)} sannsynlighet` : undefined, stil: "text-slate-500" },
+            signal: topp[0] ? visDatoer(topp[0].forklaring) : undefined,
+            ogsa: topp[1]?.navn.toLowerCase(),
+            kk: v.kkUtnyttelse,
+            dagerSiden: dagerSiden(k.sisteKontakt),
+            samtykke: k.samtykke,
+            graf: <Minigraf historikk={k.dagligSaldo} prognose={p} />,
+          };
+        })}
+      />
+
+      <Seksjon tittel="Hva er nytt siste 14 dager" undertittel="Endringer hos kunder med risiko · kunder med lav risiko kan vises inni">
+        <NyttSidenSist kunder={kunder} vurderinger={vurderinger} />
+      </Seksjon>
+
+      <Seksjon tittel="Muligheter i porteføljen" undertittel={`${antall(new Set(muligheter.map((m) => m.kundeId)).size, "kunde", "kunder")} med en god grunn til kontakt`}>
+        <MuligheterIPorteforljen muligheter={muligheter} kunder={kunder} />
+      </Seksjon>
 
       {aktivSmitte.length > 0 && (
         <Kort tittel="Smitteeffekter i porteføljen">
@@ -189,12 +138,16 @@ export default async function Portefoljeside({ searchParams }: { searchParams: P
         </Kort>
       )}
 
-      {gronn.size > 0 && <GronneMuligheter kunder={portefolje.kunder} gronn={gronn} />}
+      {gronn.size > 0 && (
+        <Seksjon tittel="Grønne muligheter" undertittel={antall(gronn.size, "kunde", "kunder")}>
+          <GronneMuligheter kunder={kunder} gronn={gronn} />
+        </Seksjon>
+      )}
     </div>
   );
 
   const kritiskeKunder = rader.filter((r) => r.v.niva === "Kritisk").map((r) => ({ navn: r.k.navn, dato: r.v.prognose.tomKasseDato }));
-  return <PortefoljeModus medAi={medAi} utenAi={<UtenAi kunder={portefolje.kunder} kritiske={kritiskeKunder} />} />;
+  return <PortefoljeModus medAi={medAi} utenAi={<UtenAi kunder={kunder} kritiske={kritiskeKunder} />} />;
 }
 
 function GronneMuligheter({ kunder, gronn }: { kunder: Kunde[]; gronn: Map<string, GronnVurdering> }) {

@@ -7,7 +7,7 @@ import type { Smitte, Vurdering } from "./score";
 import { DAGENS_DATO, dagerMellom, dagerSiden, kortDato, langDato } from "./dato";
 import { oppsummerPoster } from "./prognose";
 import { tiltakFor, vurderTiltak } from "./tiltak";
-import { kr, mnok, omUker, prosent } from "./format";
+import { kr, liten, mnok, omUker, prosent } from "./format";
 
 export const BriefSchema = z.object({
   oppsummering: z.string().describe("2–3 setninger om situasjonen, skrevet til rådgiveren"),
@@ -155,7 +155,7 @@ export function lagMalBrief(fakta: ReturnType<typeof lagFakta>, kunde: Kunde): B
     oppsummering: p.tomKasse.startsWith("nei")
       ? `${kunde.navn} holder seg innenfor rammen de neste 13 ukene, men har ${signaler.length} signaler som bør følges opp.`
       : `Prognosen viser at ${kunde.navn} passerer insolvensgrensen (${fakta.insolvens.grense.split(" (")[0]}) ${p.tomKasse}, med ${fakta.insolvens.sannsynlighetInsolvens} sannsynlighet. På det verste mangler ${kr(-tv.basis.margin)}.${
-          tv.pakke ? ` Anbefalt tiltak: ${tv.pakke.tiltak.map((t) => t.navn.toLowerCase()).join(" og ")}.` : ""
+          tv.pakke ? ` Anbefalt tiltak: ${tv.pakke.tiltak.map((t) => liten(t.navn)).join(" og ")}.` : ""
         }`,
     hvaHarSkjedd: [
       ...signaler.slice(0, 4).map((s) => ({ punkt: s.forklaring, kilde: `${s.kilde}: ${s.signal}` })),
@@ -176,4 +176,21 @@ export function lagMalBrief(fakta: ReturnType<typeof lagFakta>, kunde: Kunde): B
       ...(sisteNotat ? [] : ["Ingen rådgivernotater."]),
     ],
   };
+}
+
+// Prompt til Claude Desktop via køen på disk (src/lib/kiKo.ts). Samme regler og fakta som API-kallet,
+// men svaret må komme som ren JSON etter skjemaet, og valideres i nettleseren før det vises.
+export function lagBriefPrompt(fakta: ReturnType<typeof lagFakta>, kundeId: string): string {
+  return `${SYSTEM}
+
+OPPGAVE
+Lag et samtaleunderlag for kunden ${kundeId} ut fra FAKTA under. Ikke søk på nettet; bruk bare fakta.
+Svar KUN med gyldig JSON som følger JSON-SKJEMA. Ingen markdown, ingen kodeblokk, ingen tekst før eller etter.
+
+JSON-SKJEMA
+${JSON.stringify(z.toJSONSchema(BriefSchema))}
+
+FAKTA
+${JSON.stringify(fakta, null, 1)}
+`;
 }

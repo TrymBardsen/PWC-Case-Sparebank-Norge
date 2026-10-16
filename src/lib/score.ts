@@ -3,8 +3,8 @@
 
 import type { Kunde } from "./types.ts";
 import { DAGENS_DATO, dagerMellom, dagerSiden, kortDato } from "./dato.ts";
-import { lagPrognose, oppsummerPoster, type Prognose } from "./prognose.ts";
-import { kr, mnok, omUker, prosent } from "./format.ts";
+import { lagPrognose, oppsummerPoster, ukeFor, type Prognose } from "./prognose.ts";
+import { kr, liten, mnok, omUker, prosent } from "./format.ts";
 import { KATEGORI_TEKST, regelbasertAnalyse, tekstpoeng, type Tekstanalyse } from "./tekst.ts";
 
 export type Kilde = "Prognose" | "Bankdata" | "Regnskapssystem" | "Åpne data" | "Bransje" | "CRM" | "Tekstanalyse";
@@ -62,7 +62,7 @@ export function vurderPortefolje(
         navn: "Eksponert mot kunde i krise",
         poeng,
         maks: 12,
-        forklaring: `${prosent(d.andelAvInnbetalinger)} av innbetalingene kommer fra ${kildeNavn} (score ${kilde.score}). Betaler nå i snitt ${d.snittDagerForsinkelse} dager etter forfall.`,
+        forklaring: `${prosent(d.andelAvInnbetalinger)} av innbetalingene kommer fra ${kildeNavn} (score ${kilde.score}).${d.snittDagerForsinkelse !== undefined ? ` Betaler nå i snitt ${d.snittDagerForsinkelse} dager etter forfall.` : ""}`,
         kilde: "Bankdata",
       });
       v.score = Math.min(100, v.faktorer.reduce((s, x) => s + x.poeng, 0));
@@ -96,9 +96,12 @@ export function vurder(kunde: Kunde, tekstanalyse: Tekstanalyse = regelbasertAna
         ? `Prognosen holder seg innenfor rammen, men det er ${prosent(p)} sannsynlighet for å passere insolvensgrensen.`
         : "Prognosen holder seg innenfor rammen de neste 13 ukene.";
     if (prognose.tomKasseDato) {
-      const uke = prognose.uker.find((x) => x.poster.some((p) => p.dato === prognose.tomKasseDato)) ?? prognose.uker[0];
-      const storsteUt = oppsummerPoster(uke.poster).find((p) => p.belop < 0 && p.kategori !== "variabel");
-      forklaring = `Rammen er brukt opp ${kortDato(prognose.tomKasseDato)} (${omUker(u!)})${storsteUt ? `, utløst av ${storsteUt.navn.toLowerCase()} på ${kr(-storsteUt.belop)}` : ""}. Sannsynlighet ${prosent(p)}.`;
+      const tom = prognose.tomKasseDato;
+      const uke = ukeFor(prognose, tom) ?? prognose.uker[0];
+      // Største kjente utbetaling samme dag, ellers i samme uke
+      const kjentUt = (poster: typeof uke.poster) => oppsummerPoster(poster).find((p) => p.belop < 0 && p.kategori !== "variabel");
+      const storsteUt = kjentUt(uke.poster.filter((p) => p.dato === tom)) ?? kjentUt(uke.poster);
+      forklaring = `Rammen er brukt opp ${kortDato(prognose.tomKasseDato)} (${omUker(u!)})${storsteUt ? `, utløst av ${liten(storsteUt.navn)} på ${kr(-storsteUt.belop)}` : ""}. Sannsynlighet ${prosent(p)}.`;
     }
     f.push({ id: "tomkasse", navn: "Tid til insolvensgrensen", poeng, maks: 30, forklaring, kilde: "Prognose" });
   }
@@ -153,7 +156,9 @@ export function vurder(kunde: Kunde, tekstanalyse: Tekstanalyse = regelbasertAna
       forklaring:
         sum > 0
           ? `Skylder det offentlige ${kr(sum)}${kunde.restanser.skatt > 0 ? " i ubetalt restskatt" : ""}${kunde.restanser.forskuddstrekkOgAga > 0 ? " (inkl. forskuddstrekk – alvorlig)" : ""}.`
-          : "Ingen registrerte restanser.",
+          : kunde.samtykke < 2
+            ? "Ingen restskatt i åpne data. MVA- og forskuddstrekkrestanser er ukjent uten regnskapsdata."
+            : "Ingen registrerte restanser.",
       kilde: "Åpne data",
     });
   } else {

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Debitor, Tekstkilde } from "@/lib/types";
 import { KATEGORI_POENG, KATEGORI_TEKST, verifiserSitat, type Tekstanalyse, type Tekstsignal } from "@/lib/tekst";
-import { langDato } from "@/lib/dato";
+import { langDato, visDatoer } from "@/lib/dato";
 import { prosent } from "@/lib/format";
 import { Kort } from "./ui";
 
@@ -74,7 +74,7 @@ export function TekstSignaler({ kundeId, kilder, analyse: start, debitorer }: { 
                     </span>
                   )}
                 </div>
-                <blockquote className="mt-1 border-l-2 border-slate-300 pl-2 text-slate-800 italic">«{s.sitat}»</blockquote>
+                <blockquote className="mt-1 border-l-2 border-slate-300 pl-2 text-slate-800 italic">«{visDatoer(s.sitat)}»</blockquote>
                 <div className="mt-0.5 text-[11px] text-slate-500">
                   {kilde ? `${TYPE_TEKST[kilde.type]} · ${kilde.avsender} · ${langDato(kilde.dato)}` : "Ukjent kilde"}
                   {analyse.metode === "claude" && <span> · {s.oppsummering}</span>}

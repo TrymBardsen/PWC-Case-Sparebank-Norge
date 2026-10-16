@@ -4,12 +4,14 @@
 import type { Kunde } from "./types.ts";
 import type { Smitte, Vurdering } from "./score.ts";
 import type { GronnVurdering } from "./gronn.ts";
-import { dagerSiden, kortDato } from "./dato.ts";
-import { kr, mnok, omUker, prosent } from "./format.ts";
+import { dagerSiden, kortDato, visDatoer } from "./dato.ts";
+import { antall, kr, mnok, omUker, prosent } from "./format.ts";
 import { KATEGORI_POENG, KATEGORI_TEKST } from "./tekst.ts";
 import { vurderTiltak } from "./tiltak.ts";
+import { kortForslag, nesteHandling } from "./neste.ts";
+import { muligheterFor, type Mulighet } from "./muligheter.ts";
 
-export type Oppgavetype = "ring" | "folgopp" | "sjekkinn" | "eksponering" | "gronn" | "mote";
+export type Oppgavetype = "ring" | "folgopp" | "sjekkinn" | "eksponering" | "gronn" | "mulighet" | "mote" | "oppfolging" | "delt";
 
 export interface Oppgave {
   id: string;
@@ -20,7 +22,7 @@ export interface Oppgave {
   tittel: string;
   grunn: string;
   forslag?: string;
-  frist: "I dag" | "Denne uken";
+  frist: string; // «I dag», «Denne uken» eller «Forfalt 3. okt»
   minutterUten: number; // forberedelse uten verktøyet (analyse, prognose, tiltak)
   minutterMed: number;
   melding: string; // forhåndsutfylt sjekk-inn-melding
@@ -47,8 +49,13 @@ export function lagAgenda(
     if ((v.niva !== "Kritisk" && v.niva !== "Høy") || sensitive.has(k.id)) continue;
     const p = v.prognose;
     const dager = dagerSiden(k.sisteKontakt) ?? Infinity;
-    const pakke = vurderTiltak(k).pakke;
-    const grense = p.tomKasseDato ? `Passerer insolvensgrensen ${kortDato(p.tomKasseDato)} (${omUker(p.ukerTilTomKasse!)}, ${prosent(p.sannsynlighetInsolvens)})` : `${prosent(p.sannsynlighetInsolvens)} sannsynlighet for å passere insolvensgrensen`;
+    const tv = vurderTiltak(k);
+    const pakke = tv.pakke;
+    const neste = nesteHandling(k, v, tv);
+    // Dager under grensen skiller kunder som alle har høy sannsynlighet
+    const grense = p.tomKasseDato
+      ? `Passerer insolvensgrensen ${kortDato(p.tomKasseDato)} (${omUker(p.ukerTilTomKasse!)}). ${antall(p.dagerUnderGrensen, "dag", "dager")} under grensen i prognosen, ${prosent(p.sannsynlighetInsolvens)} modellsannsynlighet`
+      : `${prosent(p.sannsynlighetInsolvens)} modellsannsynlighet for å passere insolvensgrensen`;
     const tekst = v.faktorer.find((f) => f.id === "tekst" && f.poeng > 0);
     if (dager > 14) {
       oppgaver.push({
@@ -58,8 +65,8 @@ export function lagAgenda(
         kontakt: k.dagligLeder,
         type: "ring",
         tittel: `Ring ${fornavn(k.dagligLeder)} i ${k.navn}`,
-        grunn: `${grense}. ${Number.isFinite(dager) ? `Ikke kontaktet på ${dager} dager.` : "Ingen registrert kontakt."}${tekst ? ` ${tekst.forklaring}` : ""}`,
-        forslag: pakke ? `${pakke.prognose.margin >= 0 ? "Foreslå" : "Drøft"}: ${pakke.tiltak.map((t) => t.navn.toLowerCase()).join(" + ")}` : undefined,
+        grunn: `${grense}. ${Number.isFinite(dager) ? `Ikke kontaktet på ${dager} dager.` : "Ingen registrert kontakt."}${tekst ? ` ${visDatoer(tekst.forklaring)}` : ""}`,
+        forslag: pakke ? `${kortForslag(neste)}${pakke.prognose.margin < 0 ? " – tiltakene er ikke nok alene" : ""}` : undefined,
         frist: "I dag",
         minutterUten: 75,
         minutterMed: 10,
@@ -76,7 +83,7 @@ export function lagAgenda(
         grunn: `${grense}. Kontaktet for ${dager} dager siden.`,
         forslag: pakke
           ? pakke.prognose.margin >= 0
-            ? `Avklar tiltak: ${pakke.tiltak.map((t) => t.navn.toLowerCase()).join(" + ")}`
+            ? kortForslag(neste)
             : `Tiltakene er ikke nok (mangler ${kr(-pakke.prognose.margin)}). Vurder spesialenhet.`
           : undefined,
         frist: "I dag",
@@ -110,7 +117,7 @@ export function lagAgenda(
       kontakt: k.dagligLeder,
       type: "sjekkinn",
       tittel: `Sjekk inn med ${fornavn(k.dagligLeder)} i ${k.navn}`,
-      grunn: `${KATEGORI_TEKST[sterkest.kategori]}: «${sterkest.sitat}» Tallene viser det ikke ennå.`,
+      grunn: `${KATEGORI_TEKST[sterkest.kategori]}. ${sterkest.oppsummering} Tallene viser det ikke ennå. Fra kilden: «${visDatoer(sterkest.sitat)}»`,
       frist: "Denne uken",
       minutterUten: 30,
       minutterMed: 5,
@@ -163,7 +170,34 @@ export function lagAgenda(
     brukt.add(id);
   }
 
-  // 5. Glemte kunder med signaler
+  // 5. Gode grunner til kontakt: de to mulighetene med høyest kontaktverdi (aldri kunder i krise eller sensitiv situasjon)
+  const muligheter = sortert
+    .filter((k) => !brukt.has(k.id))
+    .flatMap((k) => muligheterFor(k, vurderinger.get(k.id)!))
+    .filter((m) => m.verdi >= 4)
+    .sort((a, b) => b.verdi - a.verdi);
+  for (const m of muligheter) {
+    if (brukt.has(m.kundeId)) continue;
+    const k = kunder.find((x) => x.id === m.kundeId)!;
+    oppgaver.push({
+      id: `mulighet-${m.id}`,
+      kundeId: k.id,
+      kundenavn: k.navn,
+      kontakt: k.dagligLeder,
+      type: "mulighet",
+      tittel: `${m.tittel}: ta kontakt med ${k.navn}`,
+      grunn: m.grunn,
+      forslag: m.tilbud,
+      frist: "Denne uken",
+      minutterUten: 30,
+      minutterMed: 5,
+      melding: `Hei ${fornavn(k.dagligLeder)}.\n\n${MELDING[m.type]} Har du tid til en kort prat denne uken?${signatur}`,
+    });
+    brukt.add(k.id);
+    if (oppgaver.filter((o) => o.type === "mulighet").length >= 2) break;
+  }
+
+  // 6. Glemte kunder med signaler
   for (const k of sortert) {
     if (brukt.has(k.id) || sensitive.has(k.id)) continue;
     const v = vurderinger.get(k.id)!;
@@ -189,3 +223,13 @@ export function lagAgenda(
 
   return oppgaver.slice(0, 7);
 }
+
+// Åpning i meldingen til kunden. Nevner aldri andre kunder eller selskaper ved navn.
+const MELDING: Record<Mulighet["type"], string> = {
+  kontrakt: "Gratulerer med den nye kontrakten! Vi hjelper gjerne med kontraktsgarantien og finansieringen av oppstarten, så likviditeten ikke blir for stram.",
+  investering: "Jeg ser at utbyggingen deres er godkjent. Vi vil gjerne se på finansieringen sammen med dere, så driften ikke må bære investeringen.",
+  vekst: "Dere har hatt sterk vekst det siste året. Vi vil gjerne sikre at finansieringen henger med, slik at veksten ikke spiser opp likviditeten.",
+  plassering: "Dere har hatt god likviditet over lengre tid. Vi kan se på om en del av den kan gi bedre avkastning uten å binde opp det dere trenger i driften.",
+  bemanning: "Dere har blitt flere ansatte det siste året. Jeg vil gjerne høre om kassekreditten og ordningene deres fortsatt passer størrelsen.",
+  generasjon: "Gratulerer med ny daglig leder. Vi stiller gjerne opp med rådgivning rundt eierskifte når dere kommer dit.",
+};

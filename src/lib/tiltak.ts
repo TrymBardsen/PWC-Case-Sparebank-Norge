@@ -3,7 +3,7 @@
 
 import type { Kunde } from "./types.ts";
 import { DAGENS_DATO, dagerMellom } from "./dato.ts";
-import { lagPrognose, STANDARDVALG, type Prognose, type PrognoseValg } from "./prognose.ts";
+import { lagPrognose, NYTT_LAN_RENTE, STANDARDVALG, type Prognose, type PrognoseValg } from "./prognose.ts";
 import { mnok } from "./format.ts";
 
 export type Aktor = "Kunden" | "Banken" | "Skatteetaten" | "Eier";
@@ -46,7 +46,8 @@ export function tiltakFor(kunde: Kunde, parametre: Parametre = {}): Tiltak[] {
   const fakturaer = kunde.fakturaer;
   const forfalte = (fakturaer ?? []).filter((f) => dagerMellom(f.forfall, DAGENS_DATO) > 0);
   const tregeDebitorer = kunde.debitorer.some((d) => (d.snittDagerForsinkelse ?? 0) > 10);
-  const kkBrukt = Math.max(0, -kunde.dagligSaldo[kunde.dagligSaldo.length - 1].saldo);
+  // Faktisk trekk på kassekreditten i dag (det som kan gjøres om til lån)
+  const kkBrukt = Math.max(0, kunde.kassekredittTrekk.at(-1) ?? 0);
   const fakturaSum = (fakturaer ?? []).reduce((s, f) => s + f.belop, 0);
   const maksBelop = Math.max(1_000_000, rund(kunde.kassekredittRamme * 2));
 
@@ -59,7 +60,7 @@ export function tiltakFor(kunde: Kunde, parametre: Parametre = {}): Tiltak[] {
     enhet: "kr",
     standard: Math.max(100_000, rund(Math.min(kkBrukt, kunde.kassekredittRamme) * 0.5, 50_000)),
     min: 50_000,
-    maks: Math.max(100_000, rund(kunde.kassekredittRamme, 50_000)),
+    maks: Math.max(100_000, Math.floor(Math.min(kkBrukt, kunde.kassekredittRamme) / 50_000) * 50_000),
     steg: 50_000,
   });
   const pRamme = param("rammeokning", parametre, {
@@ -165,7 +166,7 @@ export function tiltakFor(kunde: Kunde, parametre: Parametre = {}): Tiltak[] {
     {
       id: "kkTilLan",
       navn: "Gjør kassekreditt om til nedbetalingslån",
-      beskrivelse: `${mnok(pKkTilLan.verdi)} av kassekreditten flyttes til et 5-årig lån. Frigjør ramme, gir faste terminer.`,
+      beskrivelse: `${mnok(pKkTilLan.verdi)} av trukket kassekreditt flyttes til et 5-årig lån (antatt rente ${String(NYTT_LAN_RENTE * 100).replace(".", ",")} %). Rammen beholdes, så det frigjør handlingsrom, men gir faste terminer.`,
       aktor: "Banken",
       inngripen: 3,
       betalingslettelse: true,
@@ -208,16 +209,21 @@ export interface TiltakEffekt {
 export interface Tiltaksvurdering {
   basis: Prognose;
   effekter: TiltakEffekt[];
-  pakke: { tiltak: Tiltak[]; valg: PrognoseValg; prognose: Prognose } | null;
+  // tilstrekkelig: pakken når målet (margin over bufferen og under 20 % sannsynlighet)
+  pakke: { tiltak: Tiltak[]; valg: PrognoseValg; prognose: Prognose; tilstrekkelig: boolean } | null;
   buffer: number;
 }
+
+// Sannsynlighet for å passere insolvensgrensen som regnes som akseptabel uten tiltak
+export const MAKS_SANNSYNLIGHET = 0.2;
 
 function kombiner(scenario: PrognoseValg, tiltak: Tiltak[]): PrognoseValg {
   return tiltak.reduce((v, t) => ({ ...v, ...t.valg }), { ...scenario });
 }
 
 // Vurderer hvert tiltak for seg (gitt valgt scenario), og setter sammen den letteste
-// pakken som holder kunden over insolvensgrensen med en sikkerhetsmargin.
+// pakken som holder kunden over insolvensgrensen med en sikkerhetsmargin og lav sannsynlighet
+// for å passere den. Samme mål avgjør om en pakke trengs og når den er stor nok.
 export function vurderTiltak(kunde: Kunde, scenario: PrognoseValg = STANDARDVALG, parametre: Parametre = {}): Tiltaksvurdering {
   const basis = lagPrognose(kunde, scenario);
   const buffer = Math.max(100_000, kunde.kassekredittRamme * 0.05);
@@ -228,7 +234,8 @@ export function vurderTiltak(kunde: Kunde, scenario: PrognoseValg = STANDARDVALG
     return { tiltak: t, prognose, forbedring: prognose.margin - basis.margin };
   });
 
-  if (basis.margin >= buffer && basis.sannsynlighetInsolvens < 0.2) return { basis, effekter, pakke: null, buffer };
+  const oppfylt = (p: Prognose) => p.margin >= buffer && p.sannsynlighetInsolvens < MAKS_SANNSYNLIGHET;
+  if (oppfylt(basis)) return { basis, effekter, pakke: null, buffer };
 
   const kandidater = [...effekter]
     .filter((e) => e.forbedring > kunde.kassekredittRamme * 0.02)
@@ -237,12 +244,14 @@ export function vurderTiltak(kunde: Kunde, scenario: PrognoseValg = STANDARDVALG
   const valgte: Tiltak[] = [];
   let naa = basis;
   for (const k of kandidater) {
-    if (naa.margin >= buffer || valgte.length >= 4) break;
+    if (oppfylt(naa) || valgte.length >= 4) break;
     const forsok = lagPrognose(kunde, kombiner(scenario, [...valgte, k.tiltak]));
     if (forsok.margin - naa.margin > kunde.kassekredittRamme * 0.02) {
       valgte.push(k.tiltak);
       naa = forsok;
     }
   }
-  return valgte.length ? { basis, effekter, pakke: { tiltak: valgte, valg: kombiner(scenario, valgte), prognose: naa }, buffer } : { basis, effekter, pakke: null, buffer };
+  return valgte.length
+    ? { basis, effekter, pakke: { tiltak: valgte, valg: kombiner(scenario, valgte), prognose: naa, tilstrekkelig: oppfylt(naa) }, buffer }
+    : { basis, effekter, pakke: null, buffer };
 }

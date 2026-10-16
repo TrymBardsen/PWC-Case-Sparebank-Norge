@@ -1,7 +1,18 @@
 // Datohjelpere. Alle datoer er ISO-strenger (YYYY-MM-DD) og regnes i UTC.
 
-// Datagrunnlaget gjelder per denne datoen (kundedata.json: «Per dato»)
-export const DAGENS_DATO = "2026-10-01";
+// Datoen datafilene gjelder for (kundedata.json og tilleggsdata.json: «Per dato 2026-10-01»).
+export const DATA_DATO = "2026-10-01";
+
+// Dagens dato i appen (Europe/Oslo). Datagrunnlaget forskyves hit når det lastes inn
+// (src/lib/kundedata.ts), så siste kjente saldo er i dag og prognosen starter i morgen.
+// NEXT_PUBLIC_DEMO_DATO=YYYY-MM-DD låser datoen, f.eks. i testene eller for en fast demo.
+export const DAGENS_DATO = finnDagensDato();
+
+function finnDagensDato(): string {
+  const fast = process.env.NEXT_PUBLIC_DEMO_DATO;
+  if (fast && /^\d{4}-\d{2}-\d{2}$/.test(fast) && !Number.isNaN(Date.parse(fast))) return fast;
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Oslo" }).format(new Date());
+}
 
 // Dager siden en dato, eller null hvis datoen mangler (f.eks. ingen registrert kontakt)
 export function dagerSiden(iso: string | null): number | null {
@@ -45,6 +56,11 @@ export function kortDato(iso: string): string {
 export function langDato(iso: string): string {
   const d = tilDato(iso);
   return `${d.getUTCDate()}. ${MANEDER[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+// Bytter ISO-datoer i en tekst (2026-08-06) med norsk format (6. aug 2026)
+export function visDatoer(tekst: string): string {
+  return tekst.replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (_, iso: string) => langDato(iso));
 }
 
 export function ukenummer(iso: string): number {

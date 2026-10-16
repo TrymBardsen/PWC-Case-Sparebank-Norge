@@ -6,12 +6,14 @@ import { mnok } from "@/lib/format";
 // Samme farger som PrognoseGraf (som er en klientkomponent og ikke kan importeres herfra)
 const FARGE = { historikk: "#333333", prognose: "#006858", kritisk: "#ff4238" };
 
-const B = 132;
-const H = 36;
+const BREDDE = 132;
+const HOYDE = 36;
 const DAGER_BAKOVER = 90;
 
 // Liten saldokurve: siste 90 dager faktisk saldo og 13 ukers prognose, med insolvensgrensen stiplet.
-export function Minigraf({ historikk, prognose }: { historikk: DagSaldo[]; prognose: Prognose }) {
+export function Minigraf({ historikk, prognose, bredde = BREDDE, hoyde = HOYDE }: { historikk: DagSaldo[]; prognose: Prognose; bredde?: number; hoyde?: number }) {
+  const B = bredde;
+  const H = hoyde;
   const faktisk = historikk.slice(-DAGER_BAKOVER).map((d) => d.saldo);
   const fremover = prognose.dager.map((d) => d.saldo);
   const grense = -prognose.ramme;
@@ -29,7 +31,7 @@ export function Minigraf({ historikk, prognose }: { historikk: DagSaldo[]; progn
   const tittel = `Saldo i dag ${mnok(faktisk[faktisk.length - 1])} · laveste i prognosen ${mnok(prognose.lavesteSaldo)} (${kortDato(prognose.lavesteDato)}) · grense ${mnok(grense)}`;
 
   return (
-    <svg width={B} height={H} viewBox={`0 0 ${B} ${H}`} role="img" aria-label={tittel} className="block overflow-visible">
+    <svg width={B} height={H} viewBox={`0 0 ${B} ${H}`} role="img" aria-label={tittel} className="block h-auto max-w-full overflow-visible">
       <title>{tittel}</title>
       {prognose.ramme > 0 && <line x1={0} x2={B} y1={y(grense)} y2={y(grense)} stroke={FARGE.kritisk} strokeWidth={1} strokeDasharray="3 2" />}
       <line x1={idag} x2={idag} y1={0} y2={H} stroke="#cbd5e1" strokeWidth={1} />

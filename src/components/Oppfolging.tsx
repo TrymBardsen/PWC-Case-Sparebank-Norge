@@ -1,47 +1,70 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Notat } from "@/lib/types";
-import { DAGENS_DATO, langDato } from "@/lib/dato";
+import { DAGENS_DATO, langDato, leggTilDager } from "@/lib/dato";
+import { loggOppfolging, useLokal, type Loggpost, type Plan } from "@/lib/lokal";
 import { Kort } from "./ui";
 
 const UTFALL = ["Ringt kunden", "Møte avtalt", "Tiltak foreslått", "Kunden har kontroll", "Falsk alarm"] as const;
 
-interface Logg extends Notat {
-  utfall: string;
-}
-
 // Oppfølging lagres i nettleseren i demoen. I produksjon skrives den til CRM,
 // og utfallet brukes til å kalibrere varslene (hvilke tiltak som faktisk hjalp).
 export function Oppfolging({ kundeId, notater, radgiver }: { kundeId: string; notater: Notat[]; radgiver: string }) {
-  const nokkel = `oppfolging:${kundeId}`;
-  const [logg, setLogg] = useState<Logg[]>([]);
+  const [logg] = useLokal<Loggpost[]>(`oppfolging:${kundeId}`, []);
+  const [plan, setPlan] = useLokal<Plan | null>(`plan:${kundeId}`, null);
   const [tekst, setTekst] = useState("");
   const [utfall, setUtfall] = useState<string>(UTFALL[0]);
+  const [nesteDato, setNesteDato] = useState(leggTilDager(DAGENS_DATO, 14));
+  const [lovet, setLovet] = useState("");
 
-  useEffect(() => {
-    try {
-      setLogg(JSON.parse(localStorage.getItem(nokkel) ?? "[]"));
-    } catch {
-      setLogg([]);
-    }
-  }, [nokkel]);
-
-  function lagre() {
-    const ny = [...logg, { dato: DAGENS_DATO, forfatter: radgiver, tekst: tekst.trim(), utfall }];
-    setLogg(ny);
-    setTekst("");
-    try {
-      localStorage.setItem(nokkel, JSON.stringify(ny));
-    } catch {
-      // Ikke kritisk i demoen
-    }
-  }
-
-  const alle = [...notater.map((n) => ({ ...n, utfall: "" })), ...logg].reverse();
+  const alle = [...notater.map((n) => ({ ...n, utfall: "" })), ...logg].sort((a, b) => b.dato.localeCompare(a.dato));
 
   return (
     <Kort tittel="Notater og oppfølging">
+      <div className="mb-5 rounded-lg border border-slate-200 p-3">
+        <div className="mb-1.5 text-xs font-semibold tracking-wide text-slate-500 uppercase">Neste oppfølging</div>
+        {plan ? (
+          <div className="flex flex-wrap items-start justify-between gap-2 text-sm">
+            <span>
+              <b>{langDato(plan.nesteDato)}</b>
+              {plan.lovet && <span className="block text-slate-700">Du lovet: {plan.lovet}</span>}
+              <span className="block text-xs text-slate-500">Kommer opp i agendaen på datoen.</span>
+            </span>
+            <button onClick={() => setPlan(null)} className="text-xs font-semibold text-snb-rod hover:underline">
+              Fjern
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-end gap-2 text-sm">
+            <label className="text-xs text-slate-600">
+              Dato
+              <input type="date" value={nesteDato} min={DAGENS_DATO} onChange={(e) => setNesteDato(e.target.value)} className="mt-0.5 block rounded-md border border-slate-300 px-2 py-1 text-sm" />
+            </label>
+            <label className="min-w-48 flex-1 text-xs text-slate-600">
+              Hva har du lovet kunden?
+              <input
+                value={lovet}
+                onChange={(e) => setLovet(e.target.value)}
+                placeholder="F.eks. svar på søknad om avdragsfrihet"
+                className="mt-0.5 block w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+              />
+            </label>
+            <button
+              disabled={!nesteDato}
+              onClick={() => {
+                setPlan({ nesteDato, lovet: lovet.trim() });
+                loggOppfolging(kundeId, radgiver, `Ny oppfølging satt til ${langDato(nesteDato)}${lovet.trim() ? `: ${lovet.trim()}` : "."}`, "Oppfølging planlagt");
+                setLovet("");
+              }}
+              className="rounded-md bg-snb-gronn px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800 disabled:opacity-40"
+            >
+              Sett påminnelse
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="mb-4 space-y-2">
         <div className="flex flex-wrap gap-1.5">
           {UTFALL.map((u) => (
@@ -61,7 +84,14 @@ export function Oppfolging({ kundeId, notater, radgiver }: { kundeId: string; no
           placeholder="Hva ble avtalt?"
           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-600"
         />
-        <button onClick={lagre} disabled={!tekst.trim()} className="rounded-md bg-snb-gronn px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800 disabled:opacity-40">
+        <button
+          onClick={() => {
+            loggOppfolging(kundeId, radgiver, tekst.trim(), utfall);
+            setTekst("");
+          }}
+          disabled={!tekst.trim()}
+          className="rounded-md bg-snb-gronn px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800 disabled:opacity-40"
+        >
           Logg oppfølging
         </button>
       </div>
@@ -76,6 +106,7 @@ export function Oppfolging({ kundeId, notater, radgiver }: { kundeId: string; no
           </li>
         ))}
       </ul>
+      <p className="mt-3 text-[11px] text-slate-500">Demo: logg og påminnelser lagres bare i denne nettleseren. I drift hører de hjemme i CRM.</p>
     </Kort>
   );
 }

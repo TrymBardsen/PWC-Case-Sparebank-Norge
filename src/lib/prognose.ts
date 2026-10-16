@@ -9,8 +9,11 @@
 //  5. Reskontro (med samtykke) erstatter historikken de første fire ukene.
 //  6. Usikkerhet fra kundens egen uke-til-uke-variasjon, og sannsynligheten for
 //     å passere insolvensgrensen (kassekreditten brukt opp) per dag.
+//
+// Saldoen i datagrunnlaget er ved slutten av DAGENS_DATO (dagens bevegelser er med).
+// Prognosen starter derfor dagen etter, så dagens poster ikke telles to ganger.
 
-import type { Kunde } from "./types.ts";
+import type { Debitor, Kunde } from "./types.ts";
 import { DAGENS_DATO, dagerMellom, leggTilDager, tilDato, ukedag } from "./dato.ts";
 import { kjentePoster, type Kategori } from "./kalender.ts";
 
@@ -111,7 +114,7 @@ export interface Prognose {
   dagerUnderGrensen: number;
   brukerReskontro: boolean;
   innEndring: number;
-  storsteDebitor: string;
+  storsteDebitor: string | null; // null når kunden ikke har registrerte betalere
   storsteDebitorAndel: number;
   metode: Metode;
 }
@@ -125,6 +128,8 @@ const Z80 = 1.2816;
 export const GRONN_RENTE = 0.059; // grønt lån, rabattert rente
 export const GRONN_LOPETID_AAR = 15; // tilpasset levetiden til tiltaket
 export const NETTLEIE_OG_AVGIFT = 0.45; // kr/kWh i tillegg til spotpris (forenklet)
+export const NYTT_LAN_RENTE = 0.075; // antatt rente på lån som erstatter kassekreditt
+export const NYTT_LAN_MND = 60; // 5 år
 
 // Standard normalfordeling (Abramowitz–Stegun)
 function phi(x: number): number {
@@ -181,6 +186,7 @@ function trendFaktor(trend: number, h: number): number {
 function sigmaPerUke(kunde: Kunde, sesong: number[]): number {
   const netto = kunde.historikk.slice(-26).map((u) => (u.inn - u.utVariabel) / sesong[mndAv(leggTilDager(u.fra, 3))]);
   const diff = netto.slice(1).map((x, i) => x - netto[i]);
+  if (diff.length < 2) return 0;
   const snitt = diff.reduce((s, x) => s + x, 0) / diff.length;
   const varians = diff.reduce((s, x) => s + (x - snitt) ** 2, 0) / (diff.length - 1);
   return Math.sqrt(varians / 2);
@@ -213,10 +219,12 @@ function lagInnForMaaned(kunde: Kunde) {
 }
 
 export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Prognose {
-  const start = DAGENS_DATO;
+  const start = leggTilDager(DAGENS_DATO, 1);
   const slutt = leggTilDager(start, UKER * 7);
   const ramme = kunde.kassekredittRamme + valg.rammeokning;
-  const startSaldo = kunde.dagligSaldo[kunde.dagligSaldo.length - 1].saldo;
+  const sisteSaldo = kunde.dagligSaldo.at(-1);
+  if (!sisteSaldo) throw new Error(`Mangler saldohistorikk for ${kunde.id}`);
+  const startSaldo = sisteSaldo.saldo;
 
   const { profil: sesong, egen: egenSesong } = lagSesong(kunde);
   const inn = nivaOgTrend(kunde, sesong, "inn");
@@ -228,7 +236,7 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
   const brukerReskontro = fakturaer.length > 0;
   const blandingSlutt = brukerReskontro ? leggTilDager(start, BLANDING_DAGER) : start;
 
-  const storste = [...kunde.debitorer].sort((a, b) => b.andelAvInnbetalinger - a.andelAvInnbetalinger)[0];
+  const storste: Debitor | undefined = [...kunde.debitorer].sort((a, b) => b.andelAvInnbetalinger - a.andelAvInnbetalinger)[0];
   const forsinkelseSlutt = leggTilDager(blandingSlutt, valg.storsteKundeForsinkelse);
 
   const hendelser = new Map<string, UkePost[]>();
@@ -263,7 +271,7 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
     let innDag = uke ? (uke.inn * vekstInn) / 5 : (inn.niva * s * trendFaktor(inn.trend, hh)) / 5;
     innDag *= 1 - valg.omsetningsfall;
     if (iso < blandingSlutt) innDag *= ANDEL_KONTANT_NAR_RESKONTRO;
-    if (valg.storsteKundeForsinkelse > 0 && iso >= blandingSlutt && iso < forsinkelseSlutt) {
+    if (storste && valg.storsteKundeForsinkelse > 0 && iso >= blandingSlutt && iso < forsinkelseSlutt) {
       innDag *= 1 - storste.andelAvInnbetalinger;
     }
     leggTil(iso, { navn: brukerReskontro && iso < blandingSlutt ? "Kontantsalg (anslag)" : "Innbetalinger (normalnivå)", belop: innDag, kategori: "salg" });
@@ -290,7 +298,7 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
       const raskere = f.forfall < start ? leggTilDager(start, valg.innfordringDager) : leggTilDager(f.forfall, Math.min(forsinkelse, 5));
       if (raskere < forventet) forventet = raskere;
     }
-    if (debitor && debitor.navn === storste.navn) forventet = leggTilDager(forventet, valg.storsteKundeForsinkelse);
+    if (debitor && storste && debitor.navn === storste.navn) forventet = leggTilDager(forventet, valg.storsteKundeForsinkelse);
     if (valg.factoring) {
       factoringUtbetalt += f.belop * valg.factoringForskudd;
       leggTil(forventet, { navn: `Restbetaling factoring: ${f.debitor}`, belop: f.belop * (1 - valg.factoringForskudd) - f.belop * 0.015, kategori: "factoring" });
@@ -309,8 +317,17 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
       leggTil(leggTilDager(dato, i * 30), { navn: `${navn} (betalingsavtale ${i + 1}/${n})`, belop: -(belop / n) * (1 + 0.005 * n), kategori: "mva" });
     }
   };
+  // MVA for måneder uten historikk beregnes av samme salgsanslag som prognosen bruker:
+  // samme måned i fjor × vekst, ellers sesongjustert nivå.
+  const estimertInnForMaaned = (aar: number, mnd: number) => {
+    const ifjor = sesongnaiv ? innForMaaned(aar - 1, mnd) : undefined;
+    const dagerIMnd = new Date(Date.UTC(aar, mnd + 1, 0)).getUTCDate();
+    const anslag = ifjor !== undefined ? ifjor * vekstInn : ((inn.niva * dagerIMnd) / 7) * sesong[mnd];
+    return anslag * (1 - valg.omsetningsfall);
+  };
   for (const p of kjentePoster(kunde, start, slutt, {
     estimertInnPerMnd: inn.niva * 4.33 * (1 - valg.omsetningsfall),
+    estimertInnForMaaned,
     innForMaaned,
     stromFaktor: valg.stromFaktor,
     renteTillegg: valg.renteTillegg,
@@ -341,11 +358,13 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
   }
 
   // 5. Tiltak som tilfører eller flytter likviditet
-  if (valg.kkTilLan > 0) {
-    leggTil(leggTilDager(start, 1), { navn: "Kassekreditt omgjort til nedbetalingslån", belop: valg.kkTilLan, kategori: "tiltak" });
+  // Bare det som faktisk er trukket på kassekreditten kan gjøres om til lån
+  const kkTilLan = Math.min(valg.kkTilLan, Math.max(0, kunde.kassekredittTrekk.at(-1) ?? 0));
+  if (kkTilLan > 0) {
+    leggTil(leggTilDager(start, 1), { navn: "Kassekreditt omgjort til nedbetalingslån", belop: kkTilLan, kategori: "tiltak" });
     for (let iso = leggTilDager(start, 1); iso < slutt; iso = leggTilDager(iso, 1)) {
       if (tilDato(iso).getUTCDate() === 20) {
-        const termin = valg.kkTilLan / 60 + (valg.kkTilLan * (0.075 + valg.renteTillegg)) / 12;
+        const termin = kkTilLan / NYTT_LAN_MND + (kkTilLan * (NYTT_LAN_RENTE + valg.renteTillegg)) / 12;
         leggTil(iso, { navn: "Nytt nedbetalingslån (5 år): termin", belop: -termin, kategori: "lan" });
       }
     }
@@ -446,12 +465,12 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
     lavesteSaldo: Math.round(lavesteSaldo),
     lavesteDato,
     margin: Math.round(lavesteSaldo + ramme),
-    sannsynlighetInsolvens: Math.max(...dager.map((d) => d.sannsynlighet)),
+    sannsynlighetInsolvens: Math.max(0, ...dager.map((d) => d.sannsynlighet)),
     dagerUnderGrensen,
     brukerReskontro,
     innEndring: innEndring(kunde),
-    storsteDebitor: storste.navn,
-    storsteDebitorAndel: storste.andelAvInnbetalinger,
+    storsteDebitor: storste?.navn ?? null,
+    storsteDebitorAndel: storste?.andelAvInnbetalinger ?? 0,
     metode: {
       sesong: egenSesong ? "egen historikk" : "flat",
       nivaInnPerUke: Math.round(inn.niva),
@@ -464,6 +483,11 @@ export function lagPrognose(kunde: Kunde, valg: PrognoseValg = STANDARDVALG): Pr
       mvaFraFaktisk: true,
     },
   };
+}
+
+// Uken i prognosen som inneholder en dato
+export function ukeFor(prognose: Prognose, dato: string): PrognoseUke | undefined {
+  return prognose.uker.find((u) => u.fra <= dato && dato < leggTilDager(u.fra, 7));
 }
 
 // Samler ukens poster per navn, største først (for visning)

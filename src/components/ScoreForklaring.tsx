@@ -1,5 +1,6 @@
 import type { Faktor, Niva } from "@/lib/score";
 import { KildeTag, NivaPille } from "./ui";
+import { visDatoer } from "@/lib/dato";
 
 // Hvorfor kunden har denne scoren: én stolpe der hvert signal er et segment (med nivågrensene
 // under), og en liste over signalene som gir poeng. Signaler uten utslag og signaler som krever
@@ -65,7 +66,7 @@ export function ScoreForklaring({ faktorer, score, niva }: { faktorer: Faktor[];
                 <span className="text-sm font-semibold text-slate-900">{f.navn}</span>
                 <KildeTag kilde={f.kilde} />
               </span>
-              <span className="mt-0.5 block text-xs leading-relaxed text-slate-600">{f.forklaring}</span>
+              <span className="mt-0.5 block text-xs leading-relaxed text-slate-600">{visDatoer(f.forklaring)}</span>
               <span className="tall mt-0.5 block text-[11px] text-slate-400">
                 {f.poeng} av maks {f.maks} poeng
               </span>
@@ -85,7 +86,7 @@ export function ScoreForklaring({ faktorer, score, niva }: { faktorer: Faktor[];
               <li key={f.id} className="text-xs">
                 <span className="font-medium text-slate-700">{f.navn}</span>
                 {f.ukjent && <span className="ml-1.5 rounded bg-amber-50 px-1.5 text-[10px] font-medium text-amber-800">krever samtykke</span>}
-                <span className="block text-slate-500">{f.forklaring}</span>
+                <span className="block text-slate-500">{visDatoer(f.forklaring)}</span>
               </li>
             ))}
           </ul>

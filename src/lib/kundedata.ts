@@ -1,10 +1,18 @@
 // Oversetter data/kundedata.json og data/tilleggsdata.json til appens kundemodell.
 // Kildene er i kNOK og nynorsk; appen regner i kroner. Ingenting anslås her som ikke
 // kan utledes fra dataene: faste kostnader leses fra gjentakende betalinger i transaksjonene.
+//
+// Datagrunnlaget gjelder per 1. oktober 2026. For at demoen skal gjelde «i dag», forskyves alle
+// datoer i kundemodellen (også ISO-datoer i hendelsestekster) like mange dager fram. Faste kostnader
+// per kalendermåned leses først, fra de opprinnelige datoene, så lønn den 20. og MVA-terminer
+// fortsatt havner på riktige kalenderdager i prognosen.
 
 import type { Bransjerisiko, Kunde, Lan, Motpart, Notat, Portefolje, Tekstkilde, Uke } from "./types.ts";
+import { DAGENS_DATO, dagerMellom, leggTilDager } from "./dato.ts";
 
 const KNOK = 1000;
+
+export const STANDARD_RADGIVER = "Hanne";
 
 // ---- råformat ----
 interface Bedrift {
@@ -62,7 +70,7 @@ export interface Tilleggsdata {
   konto_historikk: { fra: string; til: string; kundar: Record<string, { driftskonto_knok: number[]; kassakreditt_trekk_knok: number[] | null; kassakreditt_ramme_knok: number | null }> };
   kontantstraum: { kundar: Record<string, { veke_fra: string[]; inn: Record<string, number[]>; ut: Record<string, number[]> }> };
   betalarar: Record<string, { namn: string; type: string; andel_2026_pst: number }[]>;
-  lan: { kunde_id: string; produkt: string; objekt: string | null; saldo_knok: number; rente_pst: number; avdrag_per_termin_knok: number; sluttdato: string; sluttbetaling_knok: number; forfalne_terminar: number; forfalt_belop_knok: number }[];
+  lan: { kunde_id: string; produkt: string; objekt: string | null; saldo_knok: number; rente_pst: number; avdrag_per_termin_knok: number; neste_forfall: string; sluttdato: string; sluttbetaling_knok: number; forfalne_terminar: number; forfalt_belop_knok: number }[];
   sikkerheiter: { kunde_id: string; verdi_knok: number }[];
   avviste_betalingar: { kunde_id: string; dato: string; belop_knok: number }[];
   samtykke: Record<string, { rekneskapsdata: boolean; system: string | null }>;
@@ -110,12 +118,37 @@ function sesongFra(uker: Uke[]): number[] {
   return snitt.map((x) => (Number.isFinite(x) && x > 0 ? x / totalt : 1));
 }
 
-export function byggPortefolje(kd: Kundedata, td: Tilleggsdata): Portefolje {
+// Flytter alle datoer i en kunde «dager» fram. Beløp, kalendermånedsprofiler og forfallsdag i måneden endres ikke.
+export function forskyvKunde(k: Kunde, dager: number): Kunde {
+  if (dager === 0) return k;
+  const d = (iso: string) => leggTilDager(iso, dager);
+  const tekst = (t: string) => t.replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (_, iso: string) => d(iso));
+  return {
+    ...k,
+    historikk: k.historikk.map((u) => ({ ...u, fra: d(u.fra) })),
+    dagligSaldo: k.dagligSaldo.map((x) => ({ ...x, dato: d(x.dato) })),
+    avvisteBetalinger: k.avvisteBetalinger.map((a) => ({ ...a, dato: d(a.dato) })),
+    lan: k.lan.map((l) => ({ ...l, sluttdato: l.sluttdato ? d(l.sluttdato) : undefined })),
+    fakturaer: k.fakturaer?.map((f) => ({ ...f, fakturadato: d(f.fakturadato), forfall: d(f.forfall) })),
+    motpart: k.motpart ? { ...k.motpart, dato: d(k.motpart.dato), hendelse: tekst(k.motpart.hendelse) } : undefined,
+    sensitiv: k.sensitiv ? tekst(k.sensitiv) : undefined,
+    sisteKontakt: k.sisteKontakt ? d(k.sisteKontakt) : null,
+    notater: k.notater.map((n) => ({ ...n, dato: d(n.dato), tekst: tekst(n.tekst) })),
+    tekster: k.tekster.map((t) => ({ ...t, dato: d(t.dato), tekst: tekst(t.tekst) })),
+  };
+}
+
+// dagensDato: datoen datagrunnlaget skal gjelde for (standard: i dag, se DAGENS_DATO)
+export function byggPortefolje(kd: Kundedata, td: Tilleggsdata, dagensDato: string = DAGENS_DATO): Portefolje {
   const perDato = kd.les_meg.join(" ").match(/Per dato: (\d{4}-\d{2}-\d{2})/)?.[1] ?? td.konto_historikk.til;
-  const radgiver = kd.Bedrifter[0]?.raadgivar.replace(/\s*\(.*\)/, "") ?? "Rådgiver";
+  // Rådgiver per kunde («Hanne (BM Bergen)» → «Hanne»). Hanne er standard når hun finnes.
+  const radgiverFor = (b: Bedrift) => b.raadgivar.replace(/\s*\(.*\)/, "");
+  const radgivere = [...new Set(kd.Bedrifter.map(radgiverFor))].sort((a, b) => Number(b === STANDARD_RADGIVER) - Number(a === STANDARD_RADGIVER) || a.localeCompare(b, "nb"));
+  const standard = radgivere[0] ?? "Rådgiver";
 
   const kunder: Kunde[] = kd.Bedrifter.map((b) => {
     const id = b.kunde_id;
+    const radgiver = radgiverFor(b);
     const eng = kd.Engasjement.filter((e) => e.kunde_id === id && e.status === "Aktiv");
     const kk = eng.find((e) => e.produkt === "Kassakreditt");
     const hendingar = kd.Hendingar.filter((h) => h.kunde_id === id);
@@ -180,6 +213,8 @@ export function byggPortefolje(kd: Kundedata, td: Tilleggsdata): Portefolje {
         forfaltBelop: l.forfalt_belop_knok * KNOK,
         sluttdato: l.sluttdato,
         sluttbetaling: l.sluttbetaling_knok * KNOK,
+        // Serielån betales den 20., leasing den 1. (neste_forfall i lånesystemet)
+        forfallsdag: Number(l.neste_forfall.slice(8, 10)) || 20,
       }));
 
     // Samtykke og reskontro
@@ -204,7 +239,7 @@ export function byggPortefolje(kd: Kundedata, td: Tilleggsdata): Portefolje {
 
     const notater: Notat[] = hendingar
       .filter((h) => h.kjelde.startsWith("Møtenotat") || h.kjelde === "Bank (CRM)")
-      .map((h) => ({ dato: h.dato, forfatter: h.kjelde.startsWith("Møtenotat") ? radgiver : "CRM", tekst: h.sitat ? `${h.hending} Kunden sa: «${h.sitat}»` : h.hending }));
+      .map((h) => ({ dato: h.dato, forfatter: h.kjelde.startsWith("Møtenotat") ? (h.kjelde.match(/Møtenotat \((.+)\)/)?.[1] ?? radgiver) : "CRM", tekst: h.sitat ? `${h.hending} Kunden sa: «${h.sitat}»` : h.hending }));
     const tekster: Tekstkilde[] = hendingar
       .filter((h) => !h.kjelde.startsWith("Møtenotat") && h.kjelde !== "Bank (CRM)")
       .map((h) => ({ id: h.hending_id, type: hendingstype(h.kjelde), dato: h.dato, avsender: h.kjelde, tittel: h.kategori, tekst: h.sitat ? `${h.hending} «${h.sitat}»` : h.hending }));
@@ -269,5 +304,6 @@ export function byggPortefolje(kd: Kundedata, td: Tilleggsdata): Portefolje {
     };
   });
 
-  return { dagensDato: perDato, radgiver, kunder };
+  const forskyvning = dagerMellom(perDato, dagensDato);
+  return { dagensDato: leggTilDager(perDato, forskyvning), radgiver: standard, radgivere, kunder: kunder.map((k) => forskyvKunde(k, forskyvning)) };
 }

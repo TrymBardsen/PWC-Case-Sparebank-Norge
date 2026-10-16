@@ -1,14 +1,111 @@
 "use client";
 
-import { useState } from "react";
-import type { Brief } from "@/lib/brief";
+import { useEffect, useState } from "react";
+import { BriefSchema, type Brief } from "@/lib/brief";
+import { lesSvar } from "@/lib/rapport";
+import { DAGENS_DATO, langDato } from "@/lib/dato";
+import { loggOppfolging } from "@/lib/lokal";
 import { Kort } from "./ui";
 
-export function AiBrief({ kundeId }: { kundeId: string }) {
+const MAKS_VENTETID = 8 * 60_000;
+
+// Tekstversjon av underlaget, til utklippstavlen
+function somTekst(b: Brief): string {
+  return [
+    b.oppsummering,
+    "",
+    `Åpning: «${b.apning}»`,
+    "",
+    "Hva har skjedd:",
+    ...b.hvaHarSkjedd.map((h) => `• ${h.punkt} (${h.kilde})`),
+    "",
+    "Spørsmål:",
+    ...b.sporsmal.map((x, i) => `${i + 1}. ${x}`),
+    "",
+    "Mulige tiltak:",
+    ...b.tiltak.map((t, i) => `${i + 1}. ${t.navn}: ${t.effekt} Forbehold: ${t.forbehold}`),
+  ].join("\n");
+}
+
+// Utkast til møtereferat: rådgiveren fyller inn hva kunden svarte og hva som ble avtalt
+function referatUtkast(b: Brief, radgiver: string): string {
+  return [
+    `Møte ${langDato(DAGENS_DATO)} · ${radgiver}`,
+    "",
+    "Bakgrunn:",
+    b.oppsummering,
+    "",
+    "Kundens svar:",
+    ...b.sporsmal.map((x) => `• ${x}\n  Svar: `),
+    "",
+    "Avtalt:",
+    ...b.tiltak.slice(0, 2).map((t) => `• ${t.navn}: [avtalt / ikke aktuelt / vurderes]`),
+    "",
+    "Neste steg:",
+  ].join("\n");
+}
+
+export function AiBrief({ kundeId, radgiver }: { kundeId: string; radgiver: string }) {
+  const [kopiert, setKopiert] = useState(false);
+  const [referat, setReferat] = useState<string | null>(null);
+  const [referatLagret, setReferatLagret] = useState(false);
   const [brief, setBrief] = useState<Brief | null>(null);
   const [merknad, setMerknad] = useState<string | null>(null);
   const [laster, setLaster] = useState(false);
+  const [jobb, setJobb] = useState<{ id: string; start: number } | null>(null);
+  const [sekunder, setSekunder] = useState(0);
 
+  // Legger forespørselen i køen som Claude Desktop svarer på
+  async function generer() {
+    setMerknad(null);
+    const res = await fetch("/api/brief/generer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kundeId }) });
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as { feil?: string } | null;
+      setMerknad(json?.feil ?? "Kunne ikke starte samtaleunderlaget.");
+      return;
+    }
+    const { jobbId } = (await res.json()) as { jobbId: string };
+    setSekunder(0);
+    setJobb({ id: jobbId, start: Date.now() });
+  }
+
+  useEffect(() => {
+    if (!jobb) return;
+    const t = setInterval(async () => {
+      setSekunder(Math.round((Date.now() - jobb.start) / 1000));
+      const res = await fetch(`/api/rapport/status?jobb=${encodeURIComponent(jobb.id)}`, { cache: "no-store" });
+      if (res.ok) {
+        const s = (await res.json()) as { status: string; svar?: string };
+        if (s.status === "ferdig" && s.svar) {
+          clearInterval(t);
+          setJobb(null);
+          let data: unknown;
+          try {
+            data = lesSvar(s.svar);
+          } catch {
+            setMerknad("Svaret fra Claude Desktop er ikke gyldig JSON. Prøv igjen, eller bruk den regelbaserte malen.");
+            return;
+          }
+          const tolket = BriefSchema.safeParse(data);
+          if (!tolket.success) {
+            const f = tolket.error.issues[0];
+            setMerknad(`Svaret fulgte ikke skjemaet (${f?.path.join(".") || "rot"}: ${f?.message}). Prøv igjen, eller bruk den regelbaserte malen.`);
+            return;
+          }
+          setBrief({ ...tolket.data, kilde: "claude", modell: "Claude Desktop" });
+          return;
+        }
+      }
+      if (Date.now() - jobb.start > MAKS_VENTETID) {
+        clearInterval(t);
+        setJobb(null);
+        setMerknad("Fikk ikke svar innen 8 minutter. Er Claude-økten som behandler køen åpen? Du kan bruke den regelbaserte malen i stedet.");
+      }
+    }, 2000);
+    return () => clearInterval(t);
+  }, [jobb]);
+
+  // Regelbasert mal (eller Claude via API-nøkkel hvis den er satt)
   async function hent() {
     setLaster(true);
     setMerknad(null);
@@ -41,13 +138,27 @@ export function AiBrief({ kundeId }: { kundeId: string }) {
             Lag et forslag til samtale med kunden: hva som har skjedd, hvilke spørsmål du bør stille og hvilke tiltak som kan hjelpe. Bygger bare på tallene og
             notatene på denne siden.
           </p>
-          <button
-            onClick={hent}
-            disabled={laster}
-            className="rounded-md bg-snb-rod px-5 py-2.5 text-sm font-semibold text-white hover:bg-snb-rod-mork disabled:opacity-60"
-          >
-            {laster ? "Lager underlag …" : "Lag samtaleunderlag"}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={generer}
+              disabled={laster || jobb !== null}
+              className="rounded-md bg-snb-rod px-5 py-2.5 text-sm font-semibold text-white hover:bg-snb-rod-mork disabled:opacity-60"
+            >
+              {jobb ? `Venter på Claude Desktop … ${sekunder} s` : "Lag samtaleunderlag"}
+            </button>
+            {jobb && (
+              <button onClick={() => setJobb(null)} className="text-sm font-semibold text-slate-600 hover:underline">
+                Avbryt
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-slate-500">
+            Svaret lages av Claude Code-økten i Claude Desktop og tar vanligvis under et minutt. Prompten inneholder kundens beregnede fakta og notater. Bruk bare
+            fiktive data.{" "}
+            <button onClick={hent} disabled={laster || jobb !== null} className="font-semibold text-snb-rod hover:underline disabled:opacity-50">
+              {laster ? "Lager mal …" : "Trenger du det nå? Bruk en enkel mal uten AI."}
+            </button>
+          </p>
         </div>
       )}
 
@@ -103,12 +214,49 @@ export function AiBrief({ kundeId }: { kundeId: string }) {
             </Seksjon>
           )}
 
-          <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
-            <span>Beslutningsstøtte. Du tar beslutningen, og betalingslettelser dokumenteres etter retningslinjene.</span>
-            <button onClick={hent} disabled={laster} className="shrink-0 font-semibold text-snb-rod hover:underline">
-              {laster ? "Lager nytt …" : "Lag på nytt"}
+          <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+            <button
+              onClick={async () => {
+                await navigator.clipboard.writeText(somTekst(brief));
+                setKopiert(true);
+                setTimeout(() => setKopiert(false), 2500);
+              }}
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-slate-400"
+            >
+              {kopiert ? "Kopiert" : "Kopier"}
+            </button>
+            <button
+              onClick={() => {
+                setReferat(referatUtkast(brief, radgiver));
+                setReferatLagret(false);
+              }}
+              className="rounded-md bg-snb-gronn px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800"
+            >
+              Lag møtereferat
+            </button>
+            <button onClick={generer} disabled={laster || jobb !== null} className="ml-auto text-xs font-semibold text-snb-rod hover:underline disabled:opacity-50">
+              {jobb ? `Venter … ${sekunder} s` : "Lag på nytt"}
             </button>
           </div>
+          {referat !== null && (
+            <div className="rounded-lg border border-slate-200 p-3">
+              <div className="mb-1 text-xs font-semibold text-slate-600">Møtereferat – fyll inn svar og avtaler</div>
+              <textarea value={referat} onChange={(e) => setReferat(e.target.value)} rows={14} className="w-full rounded-md border border-slate-200 px-2 py-1.5 font-mono text-xs outline-none focus:border-teal-600" />
+              <div className="mt-2 flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    loggOppfolging(kundeId, radgiver, referat, "Møtereferat");
+                    setReferatLagret(true);
+                  }}
+                  className="rounded-md bg-snb-gronn px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800"
+                >
+                  {referatLagret ? "Lagret i loggen" : "Lagre i kundeloggen"}
+                </button>
+                <span className="text-[11px] text-slate-500">Sett neste oppfølging i «Notater og oppfølging».</span>
+              </div>
+            </div>
+          )}
+          <p className="text-xs text-slate-500">Utkast og beslutningsstøtte. Du tar beslutningen, og betalingslettelser dokumenteres etter retningslinjene.</p>
           {merknad && <p className="text-xs text-amber-700">{merknad}</p>}
         </div>
       )}

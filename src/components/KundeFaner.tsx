@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState } from "react";
 
-// Faner under kunden: Oversikt · Utforsk tiltak · Forbered samtale · Oppfølging.
+// Faner under kunden: Oversikt · Tiltak · Samtale · Detaljer.
 // En fane monteres første gang den åpnes og blir liggende (skjult) etterpå, så valgte
 // tiltak og scenarioer beholdes når rådgiveren bytter fane. Valgt fane står i adressen
 // (?fane=…), så lenker kan peke rett til en fane og siden husker den ved omlasting.
@@ -60,7 +60,7 @@ export function KundeFaner({ faner, start }: { faner: Fane[]; start: string }) {
   );
 }
 
-// Knapp inne i en fane som bytter til en annen fane (f.eks. «Utforsk tiltak →» fra Oversikt)
+// Knapp inne i en fane som bytter til en annen fane (f.eks. «Se tiltaket i prognosen →» fra Oversikt)
 export function TilFane({ id, children, className }: { id: string; children: React.ReactNode; className?: string }) {
   const velg = useContext(VelgFane);
   return (

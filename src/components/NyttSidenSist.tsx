@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Kunde } from "@/lib/types";
 import type { Vurdering } from "@/lib/score";
-import { DAGENS_DATO, kortDato } from "@/lib/dato";
+import { DAGENS_DATO, kortDato, visDatoer } from "@/lib/dato";
 import { endringerFor, VINDU_FRA, type Endring, type Retning } from "@/lib/endringer";
 import { Kort, NivaPille } from "./ui";
 
@@ -22,6 +22,9 @@ export function NyttSidenSist({ kunder, vurderinger }: { kunder: Kunde[]; vurder
     .sort((a, b) => b.verre - a.verre || b.v.score - a.v.score);
 
   const teller = (retning: Retning) => rader.reduce((s, r) => s + r.e.filter((x) => x.retning === retning).length, 0);
+  // Kunder med lav risiko vises bare på forespørsel, så listen ikke drukner i små saldoendringer
+  const viktige = rader.filter((r) => r.v.niva !== "Lav");
+  const lave = rader.filter((r) => r.v.niva === "Lav");
 
   return (
     <Kort
@@ -39,11 +42,17 @@ export function NyttSidenSist({ kunder, vurderinger }: { kunder: Kunde[]; vurder
         <p className="text-sm text-slate-500">Ingen endringer i porteføljen de siste 14 dagene.</p>
       ) : (
         <>
-          <Liste rader={rader.slice(0, VIS_FORST)} />
-          {rader.length > VIS_FORST && (
+          {viktige.length ? <Liste rader={viktige.slice(0, VIS_FORST)} /> : <p className="text-sm text-slate-500">Ingen endringer hos kunder med risiko de siste 14 dagene.</p>}
+          {viktige.length > VIS_FORST && (
             <details className="mt-2">
-              <summary className="cursor-pointer text-sm font-semibold text-snb-rod hover:underline">Vis {rader.length - VIS_FORST} kunder til</summary>
-              <Liste rader={rader.slice(VIS_FORST)} />
+              <summary className="cursor-pointer text-sm font-semibold text-snb-rod hover:underline">Vis {viktige.length - VIS_FORST} kunder til</summary>
+              <Liste rader={viktige.slice(VIS_FORST)} />
+            </details>
+          )}
+          {lave.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-sm font-semibold text-snb-rod hover:underline">Vis {lave.length} endringer hos kunder med lav risiko</summary>
+              <Liste rader={lave} />
             </details>
           )}
           <p className="mt-3 text-xs text-slate-500">
@@ -73,7 +82,7 @@ function Liste({ rader }: { rader: { k: Kunde; v: Vurdering; e: Endring[] }[] })
                 <span className={`shrink-0 ${SYMBOL[x.retning].stil}`} aria-label={SYMBOL[x.retning].etikett} title={SYMBOL[x.retning].etikett}>
                   {SYMBOL[x.retning].tegn}
                 </span>
-                <span className="min-w-0">{x.tekst}</span>
+                <span className="min-w-0">{visDatoer(x.tekst)}</span>
               </li>
             ))}
           </ul>

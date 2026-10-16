@@ -11,6 +11,8 @@ export default function Sokside() {
   const [valgt, setValgt] = useState<Enhetsdetaljer | null>(null);
   const [laster, setLaster] = useState(false);
   const [lasterDetaljer, setLasterDetaljer] = useState(false);
+  const [sokFeil, setSokFeil] = useState<string | null>(null);
+  const [detaljFeil, setDetaljFeil] = useState<string | null>(null);
 
   useEffect(() => {
     if (q.trim().length < 2) {
@@ -19,9 +21,17 @@ export default function Sokside() {
     }
     const t = setTimeout(async () => {
       setLaster(true);
+      setSokFeil(null);
       try {
         const res = await fetch(`/api/brreg/sok?q=${encodeURIComponent(q.trim())}`);
-        setTreff(((await res.json()) as { treff: EnhetTreff[] }).treff);
+        const json = (await res.json()) as { treff?: EnhetTreff[]; feil?: string };
+        if (!res.ok || !json.treff) {
+          setTreff([]);
+          setSokFeil(json.feil ?? `Søket feilet (HTTP ${res.status}).`);
+        } else setTreff(json.treff);
+      } catch {
+        setTreff([]);
+        setSokFeil("Fikk ikke kontakt med serveren.");
       } finally {
         setLaster(false);
       }
@@ -31,10 +41,15 @@ export default function Sokside() {
 
   async function velg(orgnr: string) {
     setLasterDetaljer(true);
+    setDetaljFeil(null);
     try {
       const res = await fetch(`/api/brreg/${orgnr}`);
-      const json = (await res.json()) as { enhet?: Enhetsdetaljer };
+      const json = (await res.json()) as { enhet?: Enhetsdetaljer; feil?: string };
       setValgt(json.enhet ?? null);
+      if (!json.enhet) setDetaljFeil(json.feil ?? `Oppslaget feilet (HTTP ${res.status}).`);
+    } catch {
+      setValgt(null);
+      setDetaljFeil("Fikk ikke kontakt med serveren.");
     } finally {
       setLasterDetaljer(false);
     }
@@ -60,6 +75,8 @@ export default function Sokside() {
             className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-teal-600"
           />
           {laster && <p className="text-xs text-slate-500">Søker …</p>}
+          {sokFeil && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">{sokFeil}</p>}
+          {!laster && !sokFeil && q.trim().length >= 2 && treff.length === 0 && <p className="text-xs text-slate-500">Ingen treff.</p>}
           <ul className="space-y-2">
             {treff.map((t) => (
               <li key={t.orgnr}>
@@ -87,8 +104,9 @@ export default function Sokside() {
 
         <div className="lg:col-span-3">
           {lasterDetaljer && <p className="text-sm text-slate-500">Henter fra Brreg …</p>}
+          {!lasterDetaljer && detaljFeil && <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">{detaljFeil}</p>}
           {!lasterDetaljer && valgt && <Detaljer e={valgt} />}
-          {!lasterDetaljer && !valgt && (
+          {!lasterDetaljer && !valgt && !detaljFeil && (
             <Kort>
               <p className="text-sm text-slate-500">Velg en virksomhet for å se enhetsinformasjon, roller, siste regnskap og offentlige varselsignaler.</p>
             </Kort>
@@ -130,6 +148,11 @@ function Detaljer({ e }: { e: Enhetsdetaljer }) {
         </dl>
       </Kort>
 
+      {e.mangler.length > 0 && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          Kunne ikke hente {e.mangler.join(" og ")} fra Brønnøysundregistrene. Feltene under kan derfor være ufullstendige.
+        </p>
+      )}
       <Kort tittel="Signaler fra offentlige data">
         {e.signaler.length ? (
           <ul className="list-disc space-y-1 pl-5 text-sm text-orange-800">
@@ -155,6 +178,8 @@ function Detaljer({ e }: { e: Enhetsdetaljer }) {
             <Felt n="Kortsiktig gjeld" v={belop(r.kortsiktigGjeld, r.valuta)} />
             <Felt n="Sum gjeld" v={belop(r.sumGjeld, r.valuta)} />
           </dl>
+        ) : e.mangler.includes("regnskap") ? (
+          <p className="text-sm text-amber-800">Regnskapsregisteret svarte ikke. Prøv igjen senere.</p>
         ) : (
           <p className="text-sm text-slate-500">Ingen regnskap tilgjengelig i det åpne API-et (gjelder f.eks. enkeltpersonforetak).</p>
         )}
